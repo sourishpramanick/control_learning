@@ -2,13 +2,28 @@
 #include <fmt/core.h>
 #include <casadi/casadi.hpp>
 
+#include "robot/dynamics/include/model.hpp"
+
 int main() {
+std::vector<double> params = {1.0, 2.0, 3.0};
+robot::Model bot{std::move(params)};
 
-std::cout <<"Hello from C++!" <<std::endl;
-fmt::print("Hello from fmt library, the answer is {}. \n", 42);
+std::cout << "Robot states: " << bot.getStates() << std::endl;
+std::cout << "Robot controls: " << bot.getControls() << std::endl;
 
-casadi::SX x = casadi::SX::sym("x");
-casadi::SX f = x * x + 2 * x + 1;
-std::cout << "Symbolic expression f(x) = " << f << std::endl;
+std::vector<double> initState = {0.0, 0.0, 0.0};
+std::vector<double> control = {1.0, 0.1};
+
+std::cout << "Initial state: " << initState << std::endl;
+std::cout << "Control input: " << control << std::endl;
+
+double disc_step_size = 0.1;
+auto next_state = bot.getDiscretizedDynamics()(casadi::DMVector{
+    casadi::DM(initState),
+    casadi::DM(control),
+    casadi::DM(disc_step_size)
+})[0];
+std::cout << "Next state after applying control: " << next_state << std::endl;
+
 return 0;
 }
