@@ -49,3 +49,8 @@ CMakeUserPresets.json
 # python cache
 __pycache__/
 *.pyc
+
+# ROS2 build artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
