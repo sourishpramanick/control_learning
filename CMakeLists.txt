@@ -16,8 +16,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Find libraries (from local + conan)
 find_package(fmt CONFIG REQUIRED)
 find_package(casadi REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 add_subdirectory(src)
 # add_subdirectory(src/cpp)
 
+# Define the path to the parameters file
+set(PARAMETERS_FILE_PATH "${CMAKE_SOURCE_DIR}/src/cpp/robot/data/parameters.json")
 
+target_compile_definitions(dynamics
+    PRIVATE
+        PARAMETERS_FILE_PATH="${PARAMETERS_FILE_PATH}"
+)

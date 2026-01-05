@@ -1,0 +1,12 @@
+{
+    "parameters": {
+        "wheel_base": 0.5,
+        "max_velocity": 2.0,
+        "min_velocity": -1.0,
+        "max_angular_velocity": 1.0,
+        "min_angular_velocity": -1.0
+    },
+    "dynamics": {
+        "discretization_step_size": 0.1
+    }
+}

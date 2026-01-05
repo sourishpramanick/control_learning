@@ -11,9 +11,8 @@
 
 namespace robot {
 
-Model::Model(std::vector<double>&& parameters)
-    : m_parameters(std::move(parameters)),
-      m_states(casadi::SX::vertcat({
+Model::Model(const std::string& parameters_path)
+    : m_states(casadi::SX::vertcat({
           casadi::SX::sym("x", 1),
           casadi::SX::sym("y", 1),
           casadi::SX::sym("theta", 1)
@@ -23,6 +22,17 @@ Model::Model(std::vector<double>&& parameters)
           casadi::SX::sym("omega", 1)
       }))
 {
+    // Load parameters from JSON file
+    if (!std::filesystem::exists(parameters_path)) {
+        throw std::runtime_error("Parameters file not found at: " + parameters_path);
+    }
+    auto json_params = utilities::load_json(parameters_path);
+    std::cout << "Loaded parameters from " << parameters_path << ":\n" << json_params.dump(4) << std::endl;
+    for (auto& type1:json_params)
+    {
+        for (auto& type2:type1)
+        std::cout << type2 << std::endl;
+    }
     computeContinuousDynamics();
     discretizeContinuousDynamics();
 }
@@ -41,7 +51,9 @@ void Model::computeContinuousDynamics() {
     continuous_dynamics = casadi::Function(
         "continuous_dynamics",
         {m_states, m_controls},
-        {casadi::SX::vertcat({x_dot, y_dot, theta_dot})}
+        {casadi::SX::vertcat({x_dot, y_dot, theta_dot})},
+        {"x_y_theta", "v_omega"},
+        {"states_dot"}
     );
 } // computeContinuousDynamics
 
@@ -63,7 +75,9 @@ void Model::discretizeContinuousDynamics() {
     m_discretized_dynamics = casadi::Function(
         "discretized_dynamics",
         {m_states, m_controls, m_disc_step_size},
-        {next_states}
+        {next_states},
+        {"x_y_theta", "v_omega", "disc_step_size"},
+        {"next_x_y_theta"}
     );
     
 } // discretizeContinuousDynamics

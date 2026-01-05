@@ -23,8 +23,13 @@
 #ifndef ROBOT_DYNAMICS_MODEL_HPP
 #define ROBOT_DYNAMICS_MODEL_HPP
 
+#ifndef PARAMETERS_FILE_PATH
+#define PARAMETERS_FILE_PATH "src/cpp/robot/data/parameters.json"
+#endif
+
 #include <vector>
 #include <casadi/casadi.hpp>
+#include <utilities/utilities.hpp>
 
 /**
  * @namespace robot
@@ -44,9 +49,9 @@ class Model {
 public:
     /**
      * @brief Constructs a Model object with the given parameters.
-     * @param parameters A vector of model parameters.
+     * @param parameters_path Path to the parameters file.
      */
-    Model(std::vector<double>&& parameters);
+    Model(const std::string& parameters_path = PARAMETERS_FILE_PATH);
 
     /**
      * @brief Default destructor.
@@ -57,14 +62,15 @@ public:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
 
-    const std::vector<double>& getParameters() const { return m_parameters; } /**< Model parameters. */
+    const std::map<std::string, double>& getParameters() const { return m_parameters; } /**< Model parameters. */
     const casadi::SX& getStates() const { return m_states; } /**< Model states. */
     const casadi::SX& getControls() const { return m_controls; } /**< Model controls. */
+    const casadi::Function& getContinuousDynamics() const { return continuous_dynamics; } /**< Continuous dynamics function. */
     const casadi::Function& getDiscretizedDynamics() const { return m_discretized_dynamics; } /**< Discretized dynamics function. */
 
 private:
     // Member variables
-    std::vector<double> m_parameters; /**< Model parameters. */
+    std::map<std::string, double> m_parameters; /**< Model parameters. */
     casadi::SX m_states; /**< Symbolic robot states. */
     casadi::SX m_controls; /**< Symbolic robot control inputs. */
     casadi::Function continuous_dynamics; /**< Continuous dynamics function. */

@@ -5,11 +5,12 @@
 #include "robot/dynamics/include/model.hpp"
 
 int main() {
-std::vector<double> params = {1.0, 2.0, 3.0};
-robot::Model bot{std::move(params)};
+robot::Model bot{};
 
 std::cout << "Robot states: " << bot.getStates() << std::endl;
 std::cout << "Robot controls: " << bot.getControls() << std::endl;
+std::cout << "state_dot function: " << bot.getContinuousDynamics() << std::endl;
+std::cout << "discretized dynamics function: " << bot.getDiscretizedDynamics() << std::endl;
 
 std::vector<double> initState = {0.0, 0.0, 0.0};
 std::vector<double> controls = {1.0, 0.1};
