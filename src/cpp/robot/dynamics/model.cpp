@@ -23,11 +23,11 @@ Model::Model(std::vector<double>&& parameters)
           casadi::SX::sym("omega", 1)
       }))
 {
-    discretizeDynamics();
+    computeContinuousDynamics();
+    discretizeContinuousDynamics();
 }
 
-void Model::discretizeDynamics() {
-    // Implementation for discretizing dynamics using CasADi
+void Model::computeContinuousDynamics() {
     auto x = m_states(0);
     auto y = m_states(1);
     auto theta = m_states(2);
@@ -38,15 +38,27 @@ void Model::discretizeDynamics() {
     auto y_dot = v * casadi::SX::sin(theta);
     auto theta_dot = omega;
 
-    casadi::Function continuous_dynamics = casadi::Function(
+    continuous_dynamics = casadi::Function(
         "continuous_dynamics",
         {m_states, m_controls},
         {casadi::SX::vertcat({x_dot, y_dot, theta_dot})}
     );
-    
-    auto discretized_dynamics = casadi::simpleRK(continuous_dynamics, 5, 4);
+} // computeContinuousDynamics
 
-    auto next_states = discretized_dynamics(casadi::SXVector{m_states, m_controls, m_disc_step_size})[0];
+void Model::discretizeContinuousDynamics() {
+    // Check if continuous_dynamics is defined
+    if (continuous_dynamics.is_null()) {
+        throw std::runtime_error("Continuous dynamics function is not defined.");
+    }
+    auto discretized_dynamics = casadi::simpleRK(continuous_dynamics, 5, 4); // 5 steps, 4th order
+
+    auto next_states = discretized_dynamics(
+        casadi::SXVector{
+            m_states,
+            m_controls,
+            m_disc_step_size
+        }
+    )[0];
 
     m_discretized_dynamics = casadi::Function(
         "discretized_dynamics",
@@ -54,6 +66,6 @@ void Model::discretizeDynamics() {
         {next_states}
     );
     
-} // discretizeDynamics
+} // discretizeContinuousDynamics
 
 } // namespace robot

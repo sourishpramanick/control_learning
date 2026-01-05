@@ -67,13 +67,12 @@ private:
     std::vector<double> m_parameters; /**< Model parameters. */
     casadi::SX m_states; /**< Symbolic robot states. */
     casadi::SX m_controls; /**< Symbolic robot control inputs. */
+    casadi::Function continuous_dynamics; /**< Continuous dynamics function. */
     casadi::Function m_discretized_dynamics; /**< Discretized dynamics function. */
     casadi::SX m_disc_step_size{casadi::SX::sym("disc_step_size", 1)}; /**< Discretization step size. */
     // Member functions
-    /**
-     * @brief Discretizes the robot dynamics using CasADi.
-     */
-    void discretizeDynamics(); 
+    void computeContinuousDynamics();
+    void discretizeContinuousDynamics(); /**< Discretizes the robot dynamics using CasADi. */
 };
 
 } // namespace robot
