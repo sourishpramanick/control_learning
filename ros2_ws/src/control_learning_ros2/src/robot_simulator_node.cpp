@@ -29,7 +29,7 @@ class RobotSimulatorNode : public rclcpp::Node
 public:
     RobotSimulatorNode()
         : Node("robot_simulator_node"),
-          robot_model_(std::vector<double>{1.0, 2.0, 3.0}),
+          robot_model_(std::vector<double>{1.0, 2.0, 3.0}),  // Robot model parameters (reserved for future use)
           x_(0.0), y_(0.0), theta_(0.0),
           v_(0.0), omega_(0.0),
           disc_step_size_(0.05)  // 50ms update rate -> 20Hz
