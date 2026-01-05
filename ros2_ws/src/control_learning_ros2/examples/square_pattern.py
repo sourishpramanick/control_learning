@@ -12,6 +12,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 import time
+import math
 
 
 class SquarePatternController(Node):
@@ -80,9 +81,9 @@ class SquarePatternController(Node):
         # Calculate movement duration for each side
         forward_duration = side_length / linear_speed
         
-        # Calculate rotation duration (90 degrees)
-        # At 0.5 rad/s, 90 degrees (π/2 rad) takes π seconds
-        rotation_duration = 3.14159 / 1.0  # 90 degrees at 0.5 rad/s
+        # Calculate rotation duration (90 degrees = π/2 radians)
+        angular_speed = 0.5  # rad/s
+        rotation_duration = (math.pi / 2.0) / angular_speed
         
         # Move in a square (4 sides)
         for i in range(4):
@@ -95,7 +96,7 @@ class SquarePatternController(Node):
             time.sleep(0.5)
             
             # Rotate 90 degrees
-            self.rotate(rotation_duration, 0.5)
+            self.rotate(rotation_duration, angular_speed)
             
             # Short pause
             time.sleep(0.5)
