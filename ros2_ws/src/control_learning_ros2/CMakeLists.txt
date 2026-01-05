@@ -55,9 +55,20 @@ target_link_libraries(robot_simulator_node
   casadi
 )
 
+# Build the example simple controller (optional)
+add_executable(simple_controller
+  examples/simple_controller.cpp
+)
+
+ament_target_dependencies(simple_controller
+  rclcpp
+  geometry_msgs
+)
+
 # Install targets
 install(TARGETS
   robot_simulator_node
+  simple_controller
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -76,6 +87,17 @@ install(DIRECTORY
 # Install config files
 install(DIRECTORY
   config
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install example files
+install(PROGRAMS
+  examples/square_pattern.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  examples
   DESTINATION share/${PROJECT_NAME}/
 )
 
