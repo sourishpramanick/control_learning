@@ -45,6 +45,8 @@ public:
     // Delete copy and move constructors/operators
     Ocp(const Ocp&) = delete;
     Ocp& operator=(const Ocp&) = delete;
+    Ocp(Ocp&&) = delete;
+    Ocp& operator=(Ocp&&) = delete;
 
     /**
      * @brief Sets the target state for the optimal control problem.

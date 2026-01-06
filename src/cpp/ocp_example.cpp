@@ -58,13 +58,17 @@ int main() {
 
             std::cout << "6. Displaying trajectory (first 5 and last 5 timesteps):\n\n";
             
+            const int horizon = 50;
+            const double dt = 0.1;
+            const int display_count = 5;
+            
             // Display first few timesteps
             std::cout << std::fixed << std::setprecision(4);
             std::cout << "Time | x      | y      | theta  | v      | omega\n";
             std::cout << "-----+--------+--------+--------+--------+-------\n";
             
-            for (int k = 0; k < std::min(5, 50); ++k) {
-                double t = k * 0.1;
+            for (int k = 0; k < std::min(display_count, horizon); ++k) {
+                double t = k * dt;
                 std::cout << std::setw(4) << t << " | "
                           << std::setw(6) << optimal_states(0, k).get_elements()[0] << " | "
                           << std::setw(6) << optimal_states(1, k).get_elements()[0] << " | "
@@ -76,8 +80,8 @@ int main() {
             std::cout << " ... | ...    | ...    | ...    | ...    | ...\n";
             
             // Display last few timesteps
-            for (int k = 45; k < 50; ++k) {
-                double t = k * 0.1;
+            for (int k = horizon - display_count; k < horizon; ++k) {
+                double t = k * dt;
                 std::cout << std::setw(4) << t << " | "
                           << std::setw(6) << optimal_states(0, k).get_elements()[0] << " | "
                           << std::setw(6) << optimal_states(1, k).get_elements()[0] << " | "
@@ -87,10 +91,10 @@ int main() {
             }
             
             // Display final state
-            std::cout << "\nFinal state (at t=5.0s):\n";
-            std::cout << "  x     = " << optimal_states(0, 50).get_elements()[0] << "\n";
-            std::cout << "  y     = " << optimal_states(1, 50).get_elements()[0] << "\n";
-            std::cout << "  theta = " << optimal_states(2, 50).get_elements()[0] << "\n";
+            std::cout << "\nFinal state (at t=" << horizon * dt << "s):\n";
+            std::cout << "  x     = " << optimal_states(0, horizon).get_elements()[0] << "\n";
+            std::cout << "  y     = " << optimal_states(1, horizon).get_elements()[0] << "\n";
+            std::cout << "  theta = " << optimal_states(2, horizon).get_elements()[0] << "\n";
 
         } else {
             std::cout << "\n========================================\n";
