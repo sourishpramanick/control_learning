@@ -5,6 +5,7 @@
  */
 #include "utilities.hpp"
 #include <fstream>
+#include <iostream>
 
 namespace utilities {
 using json = nlohmann::json;
@@ -22,5 +23,21 @@ json load_json(const std::string& path) {
     }
     return j;
 } // load_json
+
+void print_map(const std::map<std::string, std::variant<double, cppDict>>& m) {
+    for (const auto& [key, value] : m) {
+        std::cout << key << ": ";
+        if (std::holds_alternative<double>(value)) {
+            std::cout << std::get<double>(value) << std::endl;
+        } else if (std::holds_alternative<cppDict>(value)) {
+            const auto& dict = std::get<cppDict>(value);
+            std::cout << "{ ";
+            for (const auto& [k, v] : dict) {
+                std::cout << k << ": " << v << " ";
+            }
+            std::cout << "}" << std::endl;
+        }
+    }
+} // print_map
 
 } // namespace utilities

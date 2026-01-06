@@ -28,6 +28,7 @@
 #endif
 
 #include <vector>
+#include <variant>
 #include <casadi/casadi.hpp>
 #include <utilities/utilities.hpp>
 
@@ -36,6 +37,8 @@
  * @brief Contains classes and functions related to robot modeling and dynamics.
  */
 namespace robot {
+
+using cppDict = std::map<std::string, double>;
 
 /**
  * @class Model
@@ -62,7 +65,7 @@ public:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
 
-    const std::map<std::string, double>& getParameters() const { return m_parameters; } /**< Model parameters. */
+    const cppDict& getParameters() const { return m_parameters; } /**< Model parameters. */
     const casadi::SX& getStates() const { return m_states; } /**< Model states. */
     const casadi::SX& getControls() const { return m_controls; } /**< Model controls. */
     const casadi::Function& getContinuousDynamics() const { return continuous_dynamics; } /**< Continuous dynamics function. */
@@ -70,7 +73,7 @@ public:
 
 private:
     // Member variables
-    std::map<std::string, double> m_parameters; /**< Model parameters. */
+    cppDict m_parameters; /**< Model parameters (double or cppDict). */
     casadi::SX m_states; /**< Symbolic robot states. */
     casadi::SX m_controls; /**< Symbolic robot control inputs. */
     casadi::Function continuous_dynamics; /**< Continuous dynamics function. */
