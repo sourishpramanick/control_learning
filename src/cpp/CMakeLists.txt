@@ -32,6 +32,23 @@ target_include_directories(dynamics
         ${CMAKE_CURRENT_SOURCE_DIR}/robot/dynamics/include
 )
 
+add_library(ocp
+    robot/ocp/Ocp.cpp
+)
+
+# Link ocp to its dependencies
+target_link_libraries(ocp
+    PUBLIC
+        casadi
+        dynamics  # OCP depends on the dynamics model
+)
+
+# Make ocp headers available
+target_include_directories(ocp
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/robot/ocp/include
+)
+
 add_executable(control_learning main.cpp)
 
 # Link executable against found libraries
@@ -40,5 +57,6 @@ target_link_libraries(control_learning
         fmt::fmt
         # local
         dynamics
+        ocp
         utilities
 )
