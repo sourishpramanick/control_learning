@@ -10,6 +10,7 @@
 #include "include/model.hpp"
 
 namespace robot {
+using json = nlohmann::json;
 
 Model::Model(const std::string& parameters_path)
     : m_states(casadi::SX::vertcat({
@@ -28,6 +29,14 @@ Model::Model(const std::string& parameters_path)
     }
     auto json_params = utilities::load_json(parameters_path);
     std::cout << "Loaded parameters from " << parameters_path << ":\n" << json_params.dump(4) << std::endl;
+    std::vector<std::string> names;
+    for (const auto& [key, value] : json_params.items())
+    {
+        std::cout << "Key: " << key << " Value: " << value << std::endl;
+    }
+
+    double zz = json_params["parameters"]["wheel_base"];
+    std::cout << "Wheel base: " << zz << std::endl;
     for (auto& type1:json_params)
     {
         for (auto& type2:type1)
