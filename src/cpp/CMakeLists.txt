@@ -60,3 +60,14 @@ target_link_libraries(control_learning
         ocp
         utilities
 )
+
+# Optional: OCP example executable
+add_executable(ocp_example ocp_example.cpp)
+
+target_link_libraries(ocp_example
+    PRIVATE
+        # local
+        dynamics
+        ocp
+        utilities
+)
