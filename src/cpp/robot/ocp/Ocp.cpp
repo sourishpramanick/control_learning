@@ -131,7 +131,7 @@ bool Ocp::solve() {
                   << m_target_state[2] << "]..." << std::endl;
         
         // Solve the optimization problem
-        auto sol = m_opti.solve();
+        m_opti.solve();
         
         m_solved = true;
         std::cout << "OCP solved successfully!" << std::endl;
