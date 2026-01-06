@@ -1,5 +1,5 @@
 /**
- * @file utilities.hpp
+ * @file Utilities.hpp
  * @brief Utility functions for C++.
  * This header defines utility functions for all C++ modules.
  */

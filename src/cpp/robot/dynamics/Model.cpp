@@ -7,7 +7,7 @@
  * parameters, states, controls, and discretized dynamics using CasADi.
  */
 
-#include "include/model.hpp"
+#include "include/Model.hpp"
 
 namespace robot {
 using json = nlohmann::json;

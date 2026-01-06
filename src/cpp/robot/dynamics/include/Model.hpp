@@ -1,5 +1,5 @@
 /**
- * @file model.hpp
+ * @file Model.hpp
  * @brief Defines the Model class for representing robot dynamics.
  *
  * This header declares the Model class, which encapsulates the robot's dynamic model,
@@ -30,7 +30,7 @@
 #include <vector>
 #include <variant>
 #include <casadi/casadi.hpp>
-#include <utilities/utilities.hpp>
+#include <utilities/Utilities.hpp>
 
 /**
  * @namespace robot

@@ -1,5 +1,5 @@
 add_library(utilities
-    utilities/utilities.cpp
+    utilities/Utilities.cpp
 )
 
 # Link utilities to nlohmann_json (header-only, just adds include paths)
@@ -16,7 +16,7 @@ target_include_directories(utilities
 )
 
 add_library(dynamics
-    robot/dynamics/model.cpp
+    robot/dynamics/Model.cpp
 )
 
 # Link dynamics to its dependencies

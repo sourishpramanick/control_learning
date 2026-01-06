@@ -1,9 +1,9 @@
 /**
- * @file utilities.cpp
+ * @file Utilities.cpp
  * @brief Implementation of utility functions for C++.
- * This file contains the implementation of utility functions defined in utilities.hpp.
+ * This file contains the implementation of utility functions defined in Utilities.hpp.
  */
-#include "utilities.hpp"
+#include "Utilities.hpp"
 #include <fstream>
 #include <iostream>
 

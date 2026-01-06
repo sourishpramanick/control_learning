@@ -2,7 +2,7 @@
 #include <fmt/core.h>
 #include <casadi/casadi.hpp>
 
-#include "robot/dynamics/include/model.hpp"
+#include "robot/dynamics/include/Model.hpp"
 
 int main() {
 robot::Model bot{};
