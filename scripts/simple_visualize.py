@@ -5,8 +5,9 @@ Simple example: Visualize trajectories from JSON
 
 from visualize_trajectories import TrajectoryVisualizer
 
-# Load and visualize
-viz = TrajectoryVisualizer('ocp_solution.json')
+# Load and visualize with obstacles
+viz = TrajectoryVisualizer('ocp_solution.json', 
+                          obstacles_file='src/cpp/robot/environment/obstacles.json')
 
 # Show static plot
 viz.plot_static(save_path='trajectory_plot.png')

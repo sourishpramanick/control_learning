@@ -28,7 +28,7 @@ auto next_state = bot.getDiscretizedDynamics()(casadi::DMVector{
 })[0];
 std::cout << "Next state after applying control: " << next_state << std::endl;
 
-Ocp::Ocp ocp(100, std::move(bot));
+Ocp::Ocp ocp(200, std::move(bot));
 std::cout << "Simulation Step Size: " << ocp.getSimStep() << std::endl;
 
 Ocp::Optimizer::Optimize(std::move(ocp));

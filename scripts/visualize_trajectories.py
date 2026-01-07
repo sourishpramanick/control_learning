@@ -16,8 +16,13 @@ from pathlib import Path
 class TrajectoryVisualizer:
     """Visualize robot trajectories from OCP solution"""
     
-    def __init__(self, json_file):
-        """Load trajectory data from JSON file"""
+    def __init__(self, json_file, obstacles_file=None):
+        """Load trajectory data from JSON file
+        
+        Args:
+            json_file: Path to trajectory JSON file
+            obstacles_file: Path to obstacles JSON file (optional)
+        """
         with open(json_file, 'r') as f:
             data = json.load(f)
         
@@ -38,6 +43,25 @@ class TrajectoryVisualizer:
         self.time = np.arange(len(self.x)) * self.sim_step
         self.control_time = np.arange(len(self.v)) * self.sim_step
         
+        # Load obstacles if provided
+        self.obstacles = []
+        if obstacles_file:
+            try:
+                with open(obstacles_file, 'r') as f:
+                    obs_data = json.load(f)
+                for name, obs in obs_data.items():
+                    self.obstacles.append({
+                        'name': name,
+                        'x': obs['x'],
+                        'y': obs['y'],
+                        'r': obs['r']
+                    })
+                print(f"Loaded {len(self.obstacles)} obstacles from {obstacles_file}")
+            except FileNotFoundError:
+                print(f"Warning: Obstacles file {obstacles_file} not found")
+            except Exception as e:
+                print(f"Warning: Error loading obstacles: {e}")
+        
     def plot_static(self, save_path=None):
         """Create static multi-panel plot"""
         fig, axes = plt.subplots(2, 3, figsize=(15, 10))
@@ -45,14 +69,27 @@ class TrajectoryVisualizer:
         
         # XY trajectory
         ax = axes[0, 0]
-        ax.plot(self.x, self.y, 'b-', linewidth=2, label='Path')
-        ax.plot(self.x[0], self.y[0], 'go', markersize=12, label='Start')
-        ax.plot(self.x[-1], self.y[-1], 'r*', markersize=15, label='Goal')
+        
+        # Plot obstacles
+        for obs in self.obstacles:
+            circle = Circle((obs['x'], obs['y']), obs['r'], 
+                          color='red', alpha=0.3, zorder=1, label='Obstacle')
+            ax.add_patch(circle)
+            # Add obstacle center
+            ax.plot(obs['x'], obs['y'], 'rx', markersize=8, markeredgewidth=2)
+        
+        ax.plot(self.x, self.y, 'b-', linewidth=2, label='Path', zorder=3)
+        ax.plot(self.x[0], self.y[0], 'go', markersize=12, label='Start', zorder=4)
+        ax.plot(self.x[-1], self.y[-1], 'r*', markersize=15, label='Goal', zorder=4)
         ax.set_xlabel('X (m)', fontsize=12)
         ax.set_ylabel('Y (m)', fontsize=12)
         ax.set_title('XY Trajectory', fontweight='bold')
         ax.grid(True, alpha=0.3)
-        ax.legend()
+        
+        # Remove duplicate labels for obstacles
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys())
         ax.axis('equal')
         
         # X vs time
@@ -115,14 +152,26 @@ class TrajectoryVisualizer:
         fig.suptitle('Robot Trajectory Animation', fontsize=16, fontweight='bold')
         
         # Left plot: XY trajectory with robot
-        ax1.plot(self.x, self.y, 'b--', linewidth=1, alpha=0.5, label='Path')
-        ax1.plot(self.x[0], self.y[0], 'go', markersize=12, label='Start')
-        ax1.plot(self.x[-1], self.y[-1], 'r*', markersize=15, label='Goal')
+        # Plot obstacles
+        for obs in self.obstacles:
+            circle = Circle((obs['x'], obs['y']), obs['r'], 
+                          color='red', alpha=0.3, zorder=1, label='Obstacle')
+            ax1.add_patch(circle)
+            # Add obstacle center
+            ax1.plot(obs['x'], obs['y'], 'rx', markersize=8, markeredgewidth=2)
+        
+        ax1.plot(self.x, self.y, 'b--', linewidth=1, alpha=0.5, label='Path', zorder=2)
+        ax1.plot(self.x[0], self.y[0], 'go', markersize=12, label='Start', zorder=4)
+        ax1.plot(self.x[-1], self.y[-1], 'r*', markersize=15, label='Goal', zorder=4)
         ax1.set_xlabel('X (m)', fontsize=12)
         ax1.set_ylabel('Y (m)', fontsize=12)
         ax1.set_title('Robot Path', fontweight='bold')
         ax1.grid(True, alpha=0.3)
-        ax1.legend(loc='upper right')
+        
+        # Remove duplicate labels for obstacles
+        handles, labels = ax1.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax1.legend(by_label.values(), by_label.keys(), loc='best')
         ax1.axis('equal')
         
         # Robot representation (circle + arrow for heading)
@@ -165,7 +214,7 @@ class TrajectoryVisualizer:
         # Legends
         lines1, labels1 = ax2.get_legend_handles_labels()
         lines2, labels2 = ax2_twin.get_legend_handles_labels()
-        ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+        ax2.legend(lines1 + lines2, labels1 + labels2, loc='best')
         
         def init():
             """Initialize animation"""
@@ -231,6 +280,9 @@ class TrajectoryVisualizer:
 def main():
     parser = argparse.ArgumentParser(description='Visualize OCP trajectories')
     parser.add_argument('json_file', type=str, help='Path to trajectory JSON file')
+    parser.add_argument('--obstacles', type=str, 
+                       default='src/cpp/robot/environment/obstacles.json',
+                       help='Path to obstacles JSON file')
     parser.add_argument('--static', action='store_true', help='Show static plot')
     parser.add_argument('--animate', action='store_true', help='Show animation')
     parser.add_argument('--save-static', type=str, help='Save static plot to file')
@@ -242,7 +294,7 @@ def main():
     args = parser.parse_args()
     
     # Load trajectories
-    viz = TrajectoryVisualizer(args.json_file)
+    viz = TrajectoryVisualizer(args.json_file, obstacles_file=args.obstacles)
     
     # Determine if we should show plots
     show_plots = not args.no_display
