@@ -21,7 +21,10 @@ Ocp::Ocp(int N, robot::Model&& bot, double simStep)
     // Constructor implementation (if needed)
 }
 
-void Ocp::setupOcp(std::vector<std::vector<double>>&& obstacles) {
+void Ocp::setupOcp(
+    std::vector<std::vector<double>>&& obstacles, std::vector<double>&& target) {
+    
+    // symbolic variables for state and control trajectories
     casadi::SX state_traj{casadi::SX::sym("states", m_numStates, m_numIntervals)};
     casadi::SX control_traj{casadi::SX::sym("controls", m_numControls, m_numIntervals-1)};
     
@@ -54,6 +57,13 @@ void Ocp::setupOcp(std::vector<std::vector<double>>&& obstacles) {
 
     // initialize cost function
     casadi::SX cost = casadi::SX::zeros(1);
+
+    // construct target from input vector
+    casadi::SX target_state = casadi::SX::vertcat({
+        casadi::SX(target[0]), 
+        casadi::SX(target[1]), 
+        casadi::SX(target[2])
+    });
 
     for (int node = 0; node < m_numIntervals - 1; ++node) {
         // states
@@ -100,10 +110,10 @@ void Ocp::setupOcp(std::vector<std::vector<double>>&& obstacles) {
             control_traj(casadi::Slice(), node)
         );
 
-        // cost due to state deviation from [9, 4, 0]
+        // cost due to state deviation from [target[0], target[1], target[2]]
         cost += casadi::SX::dot(
-            state_traj(casadi::Slice(), node) - casadi::SX::vertcat({casadi::SX(9), casadi::SX(4), casadi::SX(0)}),
-            state_traj(casadi::Slice(), node) - casadi::SX::vertcat({casadi::SX(9), casadi::SX(4), casadi::SX(0)})
+            state_traj(casadi::Slice(), node) - target_state,
+            state_traj(casadi::Slice(), node) - target_state
         );
         /*********************************************/
     }
@@ -113,10 +123,10 @@ void Ocp::setupOcp(std::vector<std::vector<double>>&& obstacles) {
     lb_decision_vars.insert(lb_decision_vars.end(), m_numStates, -casadi::inf);
     ub_decision_vars.insert(ub_decision_vars.end(), m_numStates, casadi::inf);
     // No control at final node
-    // then add cost for final state
-    cost += casadi::SX::dot(
-        state_traj(casadi::Slice(), m_numIntervals - 1) - casadi::SX::vertcat({casadi::SX(9), casadi::SX(4), casadi::SX(0)}),
-        state_traj(casadi::Slice(), m_numIntervals - 1) - casadi::SX::vertcat({casadi::SX(9), casadi::SX(4), casadi::SX(0)})
+    // Add cost for final state
+    cost += 1000000 * casadi::SX::dot(
+        state_traj(casadi::Slice(), m_numIntervals - 1) - target_state,
+        state_traj(casadi::Slice(), m_numIntervals - 1) - target_state
     );
 
     // concatenate decision variables and constraints

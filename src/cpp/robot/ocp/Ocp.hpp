@@ -56,7 +56,10 @@ public:
 
 private:
     // methods
-    void setupOcp(std::vector<std::vector<double>>&& obstacles={});
+    void setupOcp(
+        std::vector<std::vector<double>>&& obstacles={},
+        std::vector<double>&& target={4.0, 4.0, 0.0}
+        );
     void createInitialGuess();
     void solveOcp();
     void extractSolution();

@@ -8,6 +8,14 @@
 namespace Ocp {
 
 void Optimizer::Optimize(Ocp&& ocp) {
+    // load target data
+    utilities::json target_json = utilities::load_json("src/cpp/robot/environment/target.json");
+    std::vector<double> target{
+        target_json["x"].get<double>(),
+        target_json["y"].get<double>(),
+        target_json["theta"].get<double>()
+    };
+    std::cout << "Loaded target from JSON: " << target << std::endl;
     // load obstacle data as vectors of [x, y, r]
     utilities::json obstacle_json = utilities::load_json("src/cpp/robot/environment/obstacles.json");
     std::vector<std::vector<double>> obstacles{obstacle_json.size(), std::vector<double>(3, 0.0)};
@@ -21,7 +29,7 @@ void Optimizer::Optimize(Ocp&& ocp) {
     std::cout << "Loaded " << obstacles.size() << " obstacles from JSON." << std::endl;
     std::cout << obstacles << std::endl;
 
-    ocp.setupOcp(std::move(obstacles));
+    ocp.setupOcp(std::move(obstacles), std::move(target));
     ocp.createInitialGuess();
     ocp.solveOcp();
     ocp.extractSolution();
