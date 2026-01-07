@@ -3,6 +3,8 @@
 #include <casadi/casadi.hpp>
 
 #include "robot/dynamics/include/Model.hpp"
+#include "robot/ocp/Ocp.hpp"
+#include "robot/ocp/Optimizer.hpp"
 
 int main() {
 robot::Model bot{};
@@ -25,6 +27,11 @@ auto next_state = bot.getDiscretizedDynamics()(casadi::DMVector{
     casadi::DM(disc_step_size)
 })[0];
 std::cout << "Next state after applying control: " << next_state << std::endl;
+
+Ocp::Ocp ocp(100, std::move(bot));
+std::cout << "Simulation Step Size: " << ocp.getSimStep() << std::endl;
+
+Ocp::Optimizer::Optimize(std::move(ocp));
 
 return 0;
 }

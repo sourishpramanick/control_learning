@@ -17,13 +17,15 @@ target_include_directories(utilities
 
 add_library(dynamics
     robot/dynamics/Model.cpp
+    robot/ocp/Ocp.cpp
+    robot/ocp/Optimizer.cpp
 )
 
 # Link dynamics to its dependencies
 target_link_libraries(dynamics
     PUBLIC
         casadi
-        utilities  # Now dynamics can use utilities
+        utilities
 )
 
 # Make dynamics headers available

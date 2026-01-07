@@ -64,20 +64,24 @@ public:
     // Copy and move constructors/operators deleted
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
+    // Move constructors/operators defaulted
+    Model(Model&&) = default;
+    Model& operator=(Model&&) = default;
 
     const cppDict& getParameters() const { return m_parameters; } /**< Model parameters. */
     const casadi::SX& getStates() const { return m_states; } /**< Model states. */
     const casadi::SX& getControls() const { return m_controls; } /**< Model controls. */
-    const casadi::Function& getContinuousDynamics() const { return continuous_dynamics; } /**< Continuous dynamics function. */
-    const casadi::Function& getDiscretizedDynamics() const { return m_discretized_dynamics; } /**< Discretized dynamics function. */
+    const casadi::Function& getContinuousDynamics() const { return m_continuousDynamics; } /**< Continuous dynamics function. */
+    const casadi::Function& getDiscretizedDynamics() const { return m_discretizedDynamics; } /**< Discretized dynamics function. */
+    const casadi::SX& getDiscStepSize() const { return m_disc_step_size; } /**< Discretization step size. */
 
 private:
     // Member variables
     cppDict m_parameters; /**< Model parameters (double or cppDict). */
     casadi::SX m_states; /**< Symbolic robot states. */
     casadi::SX m_controls; /**< Symbolic robot control inputs. */
-    casadi::Function continuous_dynamics; /**< Continuous dynamics function. */
-    casadi::Function m_discretized_dynamics; /**< Discretized dynamics function. */
+    casadi::Function m_continuousDynamics; /**< Continuous dynamics function. */
+    casadi::Function m_discretizedDynamics; /**< Discretized dynamics function. */
     casadi::SX m_disc_step_size{casadi::SX::sym("disc_step_size", 1)}; /**< Discretization step size. */
     // Member functions
     void computeContinuousDynamics();
