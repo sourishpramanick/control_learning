@@ -56,7 +56,7 @@ public:
 
 private:
     // methods
-    void setupOcp();
+    void setupOcp(std::vector<std::vector<double>>&& obstacles={});
     void createInitialGuess();
     void solveOcp();
     void extractSolution();

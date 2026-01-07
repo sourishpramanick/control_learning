@@ -21,7 +21,7 @@ Ocp::Ocp(int N, robot::Model&& bot, double simStep)
     // Constructor implementation (if needed)
 }
 
-void Ocp::setupOcp() {
+void Ocp::setupOcp(std::vector<std::vector<double>>&& obstacles) {
     casadi::SX state_traj{casadi::SX::sym("states", m_numStates, m_numIntervals)};
     casadi::SX control_traj{casadi::SX::sym("controls", m_numControls, m_numIntervals-1)};
     
@@ -84,18 +84,13 @@ void Ocp::setupOcp() {
         /* Path Constraints **************************/
         auto x = state_traj(0, node);
         auto y = state_traj(1, node);
-        constraints.push_back(
-            // state_traj(0, node) - casadi::SX::sq(state_traj(1, node)) 
-            - casadi::SX::sq(x - 4) - casadi::SX::sq(y - 4) + 16
-        );
-        lb_constraints.push_back(-casadi::inf);
-        ub_constraints.push_back(0.0);
-
-        constraints.push_back(
-            - casadi::SX::sq(x - 7) - casadi::SX::sq(y - 2) + 1
-        );
-        lb_constraints.push_back(-casadi::inf);
-        ub_constraints.push_back(0.0);
+        for (const auto& obs : obstacles) {
+            constraints.push_back(
+                - casadi::SX::sq(x - obs[0]) - casadi::SX::sq(y - obs[1]) + casadi::SX::sq(obs[2])
+            );
+            lb_constraints.push_back(-casadi::inf);
+            ub_constraints.push_back(0.0);
+        }
         /*********************************************/
 
         /* Cost Function *****************************/
