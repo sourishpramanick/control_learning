@@ -43,6 +43,13 @@ public:
     int getNumControls() const { return m_numControls; } /**< Get number of controls. */
     double getSimStep() const { return m_simStep; } /**< Get simulation step size. */
     const casadi::Function& getNLPSolver() const { return m_nlpSolver; } /**< Get NLP solver function. */
+    
+    // Trajectory getters
+    const std::vector<double>& getXTrajectory() const { return m_x_traj; }
+    const std::vector<double>& getYTrajectory() const { return m_y_traj; }
+    const std::vector<double>& getThetaTrajectory() const { return m_theta_traj; }
+    const std::vector<double>& getVTrajectory() const { return m_v_traj; }
+    const std::vector<double>& getOmegaTrajectory() const { return m_omega_traj; }
 
 
     // attributes
@@ -53,6 +60,8 @@ private:
     void createInitialGuess();
     void solveOcp();
     void extractSolution();
+    void plotSolution();
+    void saveTrajectoriesToJson(const std::string& filename) const;
 
     // attributes
     double m_simStep; 
