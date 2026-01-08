@@ -124,7 +124,7 @@ void Ocp::setupOcp(
     ub_decision_vars.insert(ub_decision_vars.end(), m_numStates, casadi::inf);
     // No control at final node
     // Add cost for final state
-    cost += 1000000 * casadi::SX::dot(
+    cost += casadi::SX::dot(
         state_traj(casadi::Slice(), m_numIntervals - 1) - target_state,
         state_traj(casadi::Slice(), m_numIntervals - 1) - target_state
     );
@@ -162,11 +162,11 @@ void Ocp::createInitialGuess() {
     m_initialGuess.resize(total_decision_vars, 1.0);
 } // createInitialGuess
 
-void Ocp::solveOcp() {
+void Ocp::solveOcp(std::vector<double>&& initState) {
 
     casadi::DMDict arg = {
         {"x0", m_initialGuess},
-        {"p", casadi::DM::zeros(m_numStates)},
+        {"p", initState},
         {"lbx", m_lbx},
         {"ubx", m_ubx},
         {"lbg", m_lbg},

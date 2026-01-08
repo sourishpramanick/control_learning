@@ -8,6 +8,15 @@
 namespace Ocp {
 
 void Optimizer::Optimize(Ocp&& ocp) {
+    // load initial state data
+    utilities::json init_json = utilities::load_json("src/cpp/robot/environment/initial_state.json");
+    std::vector<double> init_state{
+        init_json["x"].get<double>(),
+        init_json["y"].get<double>(),
+        init_json["theta"].get<double>()
+    };
+    std::cout << "Loaded initial state from JSON: " << init_state << std::endl;
+    
     // load target data
     utilities::json target_json = utilities::load_json("src/cpp/robot/environment/target.json");
     std::vector<double> target{
@@ -16,6 +25,7 @@ void Optimizer::Optimize(Ocp&& ocp) {
         target_json["theta"].get<double>()
     };
     std::cout << "Loaded target from JSON: " << target << std::endl;
+    
     // load obstacle data as vectors of [x, y, r]
     utilities::json obstacle_json = utilities::load_json("src/cpp/robot/environment/obstacles.json");
     std::vector<std::vector<double>> obstacles{obstacle_json.size(), std::vector<double>(3, 0.0)};
@@ -31,7 +41,7 @@ void Optimizer::Optimize(Ocp&& ocp) {
 
     ocp.setupOcp(std::move(obstacles), std::move(target));
     ocp.createInitialGuess();
-    ocp.solveOcp();
+    ocp.solveOcp(std::move(init_state));
     ocp.extractSolution();
     // ocp.plotSolution();
     ocp.saveTrajectoriesToJson("ocp_solution.json");

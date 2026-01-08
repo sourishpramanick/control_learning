@@ -61,7 +61,7 @@ private:
         std::vector<double>&& target={4.0, 4.0, 0.0}
         );
     void createInitialGuess();
-    void solveOcp();
+    void solveOcp(std::vector<double>&& initState={0.0, 0.0, 0.0});
     void extractSolution();
     void plotSolution();
     void saveTrajectoriesToJson(const std::string& filename) const;
