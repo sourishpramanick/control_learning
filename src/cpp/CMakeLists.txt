@@ -43,4 +43,5 @@ target_link_libraries(control_learning
         # local
         dynamics
         utilities
+        codegen  # Add the generated C code library
 )
