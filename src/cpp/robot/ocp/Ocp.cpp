@@ -135,8 +135,8 @@ void Ocp::setupOcp(
 
     // create NLP problem
     casadi::Dict nlp_options;
-    // nlp_options["ipopt.print_level"] = 0;
-    nlp_options["print_time"] = false;
+    nlp_options["ipopt.print_level"] = 0;
+    nlp_options["print_time"] = true;
     m_nlpSolver = casadi::nlpsol(
         "nlp_solver",
         "ipopt",
