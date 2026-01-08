@@ -28,7 +28,7 @@ robot::Model bot{};
 // })[0];
 // std::cout << "Next state after applying control: " << next_state << std::endl;
 
-Ocp::Ocp ocp(500, std::move(bot));
+Ocp::Ocp ocp(50, std::move(bot), 0.2);
 std::cout << "Simulation Step Size: " << ocp.getSimStep() << std::endl;
 
 Ocp::Optimizer::Optimize(std::move(ocp));

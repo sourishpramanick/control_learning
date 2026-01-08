@@ -8,6 +8,7 @@
 #include "Ocp.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <unistd.h>
 
 namespace Ocp {
 
@@ -153,8 +154,29 @@ void Ocp::setupOcp(
     m_ubx = std::move(ub_decision_vars);
     m_lbg = std::move(lb_constraints);
     m_ubg = std::move(ub_constraints);
-
 } // setupOcp
+
+void Ocp::generateCode() {
+
+    // Save current working directory
+    char cwd[PATH_MAX];
+    getcwd(cwd, sizeof(cwd));
+
+    // Target directory and filename
+    std::string gen_dir = "src/c/robot/generated_code";
+    std::string gen_filename = "nlp_solver_generated.c";
+    casadi::Dict gen_opts;
+    gen_opts["with_header"] = true;
+
+    // Change to target directory, generate code, then restore directory
+    if (chdir(gen_dir.c_str()) == 0) {
+        m_nlpSolver.generate(gen_filename, gen_opts);
+        chdir(cwd);
+    } else {
+        std::cerr << "Error: Could not change directory to " << gen_dir << std::endl;
+    }
+
+} // generateCode
 
 void Ocp::createInitialGuess() {
     // create a simple initial guess (ones)

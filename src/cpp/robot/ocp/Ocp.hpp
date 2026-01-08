@@ -60,6 +60,7 @@ private:
         std::vector<std::vector<double>>&& obstacles={},
         std::vector<double>&& target={4.0, 4.0, 0.0}
         );
+    void generateCode();
     void createInitialGuess();
     void solveOcp(std::vector<double>&& initState={0.0, 0.0, 0.0});
     void extractSolution();
@@ -91,4 +92,3 @@ private:
 } // namespace Ocp
 
 #endif // OCP_HPP
-

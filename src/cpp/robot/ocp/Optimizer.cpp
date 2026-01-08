@@ -40,6 +40,7 @@ void Optimizer::Optimize(Ocp&& ocp) {
     std::cout << obstacles << std::endl;
 
     ocp.setupOcp(std::move(obstacles), std::move(target));
+    ocp.generateCode();
     ocp.createInitialGuess();
     ocp.solveOcp(std::move(init_state));
     ocp.extractSolution();
