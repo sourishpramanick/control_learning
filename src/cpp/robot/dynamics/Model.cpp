@@ -1,9 +1,9 @@
 /**
- * @file model.cpp
+ * @file Model.cpp
  * @brief Implements the Model class for representing robot dynamics.
  * 
  * This source file provides the implementation of the Model class declared
- * in model.hpp, which encapsulates the robot's dynamic model, including its
+ * in Model.hpp, which encapsulates the robot's dynamic model, including its
  * parameters, states, controls, and discretized dynamics using CasADi.
  */
 
@@ -12,7 +12,10 @@
 namespace robot {
 using json = nlohmann::json;
 
-Model::Model(const std::string& parameters_path)
+constexpr int RK_NUM_STEPS = 5;
+constexpr int RK_ORDER = 4;
+
+Model::Model(const std::string& parametersPath)
     : m_states(casadi::SX::vertcat({
           casadi::SX::sym("x", 1),
           casadi::SX::sym("y", 1),
@@ -24,12 +27,12 @@ Model::Model(const std::string& parameters_path)
       }))
 {
     // Load parameters from JSON file
-    if (!std::filesystem::exists(parameters_path)) {
-        throw std::runtime_error("Parameters file not found at: " + parameters_path);
+    if (!std::filesystem::exists(parametersPath)) {
+        throw std::runtime_error("Parameters file not found at: " + parametersPath);
     }
-    auto json_params = utilities::load_json(parameters_path);
-    std::cout << "Loaded parameters from " << parameters_path << ":\n" << json_params.dump(4) << std::endl;
-    
+    auto json_params = utilities::loadJson(parametersPath);
+    std::cout << "Loaded parameters from " << parametersPath << ":\n" << json_params.dump(4) << std::endl;
+
     for (const auto& [key, value] : json_params.items())
     {
         for (const auto& [innerKey, innerValue] : value.items())
@@ -62,14 +65,14 @@ void Model::computeContinuousDynamics() {
     auto v = m_controls(0);
     auto omega = m_controls(1);
 
-    auto x_dot = v * casadi::SX::cos(theta);
-    auto y_dot = v * casadi::SX::sin(theta);
-    auto theta_dot = omega;
+    auto xDot = v * casadi::SX::cos(theta);
+    auto yDot = v * casadi::SX::sin(theta);
+    auto thetaDot = omega;
 
     m_continuousDynamics = casadi::Function(
         "m_continuousDynamics",
         {m_states, m_controls},
-        {casadi::SX::vertcat({x_dot, y_dot, theta_dot})},
+        {casadi::SX::vertcat({xDot, yDot, thetaDot})},
         {"x_y_theta", "v_omega"},
         {"states_dot"}
     );
@@ -80,20 +83,20 @@ void Model::discretizeContinuousDynamics() {
     if (m_continuousDynamics.is_null()) {
         throw std::runtime_error("Continuous dynamics function is not defined.");
     }
-    auto discretized_dynamics = casadi::simpleRK(m_continuousDynamics, 5, 4); // 5 steps, 4th order
+    auto discretizedDynamics = casadi::simpleRK(m_continuousDynamics, RK_NUM_STEPS, RK_ORDER); // 5 steps, 4th order
 
-    auto next_states = discretized_dynamics(
+    auto nextStates = discretizedDynamics(
         casadi::SXVector{
             m_states,
             m_controls,
-            m_disc_step_size
+            m_discStepSize
         }
     )[0];
 
     m_discretizedDynamics = casadi::Function(
         "discretized_dynamics",
-        {m_states, m_controls, m_disc_step_size},
-        {next_states},
+        {m_states, m_controls, m_discStepSize},
+        {nextStates},
         {"x_y_theta", "v_omega", "disc_step_size"},
         {"next_x_y_theta"}
     );

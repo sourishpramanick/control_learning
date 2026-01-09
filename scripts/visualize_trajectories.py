@@ -50,6 +50,8 @@ class TrajectoryVisualizer:
                 with open(obstacles_file, 'r') as f:
                     obs_data = json.load(f)
                 for name, obs in obs_data.items():
+                    if name == 'safety_margin':
+                        continue
                     self.obstacles.append({
                         'name': name,
                         'x': obs['x'],

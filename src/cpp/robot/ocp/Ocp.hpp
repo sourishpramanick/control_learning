@@ -33,7 +33,7 @@ public:
      * @param bot Robot dynamics model.
      * @param simStep Simulation step size (default: 0.1).
      */
-    Ocp(int N, robot::Model&& bot, double simStep = 0.1);
+    Ocp(int N, robot::Model&& bot, double safetyMargin = 0.0, double simStep = 0.1);
     ~Ocp() = default; /**< Default destructor. */
 
     // methods
@@ -45,27 +45,30 @@ public:
     const casadi::Function& getNLPSolver() const { return m_nlpSolver; } /**< Get NLP solver function. */
     
     // Trajectory getters
-    const std::vector<double>& getXTrajectory() const { return m_x_traj; }
-    const std::vector<double>& getYTrajectory() const { return m_y_traj; }
-    const std::vector<double>& getThetaTrajectory() const { return m_theta_traj; }
-    const std::vector<double>& getVTrajectory() const { return m_v_traj; }
-    const std::vector<double>& getOmegaTrajectory() const { return m_omega_traj; }
+    const std::vector<double>& getXTrajectory() const { return m_xTraj; }
+    const std::vector<double>& getYTrajectory() const { return m_yTraj; }
+    const std::vector<double>& getThetaTrajectory() const { return m_thetaTraj; }
+    const std::vector<double>& getVTrajectory() const { return m_vTraj; }
+    const std::vector<double>& getOmegaTrajectory() const { return m_omegaTraj; }
 
 
     // attributes
 
 private:
     // methods
-    void setupOcp(std::vector<std::vector<double>>&& obstacles={});
-    void generateCode();
-    void createInitialGuess();
-    void solveOcp(std::vector<double>&& initState={0.0, 0.0, 0.0}, std::vector<double>&& targetState={10.0, 10.0, 0.0});
-    void extractSolution();
-    void plotSolution();
-    void saveTrajectoriesToJson(const std::string& filename) const;
+    void setupOcp(std::vector<std::vector<double>>&& obstacles={}); /**< Setup the OCP problem. */
+    void generateCode(); /**< Generate code for the OCP solver. */
+    void createInitialGuess(); /**< Create an initial guess for the solver. */
+    void solveOcp(
+        std::vector<double>&& initState={0.0, 0.0, 0.0}, 
+        std::vector<double>&& targetState={10.0, 10.0, 0.0}); /**< Solve the OCP problem. */
+    void extractSolution(); /**< Extract the solution from the solver. */
+    void plotSolution(); /**< Plot the solution trajectories. */
+    void saveTrajectoriesToJson(const std::string& filename) const; /**< Save trajectories to a JSON file. */
 
     // attributes
-    double m_simStep; 
+    double m_obstacleSafetyMargin; /**< Safety margin around obstacles. */
+    double m_simStep;  /**< Simulation step size. */
     int m_numIntervals; /**< Number of intervals in the discretization. */
     robot::Model m_model; /**< Robot dynamics model. */
     int m_numStates; /**< Number of states in the robot model. */
@@ -77,12 +80,12 @@ private:
     std::vector<double> m_ubg; /**< Upper bounds on constraints. */
     std::vector<double> m_initialGuess; /**< Initial guess for decision variables. */
     casadi::DMDict m_sol; /**< Solution dictionary. */
-    std::vector<double> m_opt_x; /**< Optimal decision variables. */
-    std::vector<double> m_x_traj; /**< X trajectory. */
-    std::vector<double> m_y_traj; /**< Y trajectory. */
-    std::vector<double> m_theta_traj; /**< Theta trajectory. */
-    std::vector<double> m_v_traj; /**< Velocity trajectory. */
-    std::vector<double> m_omega_traj; /**< Angular velocity trajectory. */    
+    std::vector<double> m_optx; /**< Optimal decision variables. */
+    std::vector<double> m_xTraj; /**< X trajectory. */
+    std::vector<double> m_yTraj; /**< Y trajectory. */
+    std::vector<double> m_thetaTraj; /**< Theta trajectory. */
+    std::vector<double> m_vTraj; /**< Velocity trajectory. */
+    std::vector<double> m_omegaTraj; /**< Angular velocity trajectory. */    
 
 }; // Ocp
 

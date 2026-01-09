@@ -10,7 +10,7 @@
 namespace utilities {
 using json = nlohmann::json;
 
-json load_json(const std::string& path) {
+json loadJson(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: " + path);
@@ -22,9 +22,9 @@ json load_json(const std::string& path) {
         throw std::runtime_error("JSON parse error in file " + path + ": " + std::string(e.what()));
     }
     return j;
-} // load_json
+} // loadJson
 
-void print_map(const std::map<std::string, std::variant<double, cppDict>>& m) {
+void printMap(const std::map<std::string, std::variant<double, cppDict>>& m) {
     for (const auto& [key, value] : m) {
         std::cout << key << ": ";
         if (std::holds_alternative<double>(value)) {
@@ -38,6 +38,6 @@ void print_map(const std::map<std::string, std::variant<double, cppDict>>& m) {
             std::cout << "}" << std::endl;
         }
     }
-} // print_map
+} // printMap
 
 } // namespace utilities

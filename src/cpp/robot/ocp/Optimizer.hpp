@@ -7,16 +7,16 @@
  #define OPTIMIZER_HPP
 
 #include <casadi/casadi.hpp>
-#include <robot/dynamics/include/Model.hpp>
 #include <robot/ocp/Ocp.hpp>
 
 namespace Ocp {
 /**
- * @brief : tba
+ * @brief : Handler (Friend) class to optimize the OCP problem.
  */
 class Optimizer {
 public:
-static void Optimize(Ocp&& ocp);
+static void Optimize(); /**< Solve the given OCP problem. */
+static void OptimizeCodeGen(); /**< Solve the OCP problem using generated code from solver. */
 }; // Optimizer
 } // Ocp
 

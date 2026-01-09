@@ -1,44 +1,61 @@
 /**
- * @brief : tba
+ * @file Optimizer.cpp
+ * @brief Implementation of the Optimizer class.
+ * This source file provides the implementation of the Optimizer class declared
+ * in Optimizer.hpp, which handles the optimization of the Optimal Control Problem (OCP).
  */
 
 #include "Optimizer.hpp"
-#include "utilities/Utilities.hpp"
 
 namespace Ocp {
 
-void Optimizer::Optimize(Ocp&& ocp) {
+void Optimizer::Optimize() {
     // load initial state data
-    utilities::json init_json = utilities::load_json("src/cpp/robot/environment/initial_state.json");
+    utilities::json initStateJson = utilities::loadJson("src/cpp/robot/environment/initial_state.json");
     std::vector<double> init_state{
-        init_json["x"].get<double>(),
-        init_json["y"].get<double>(),
-        init_json["theta"].get<double>()
+        initStateJson["x"].get<double>(),
+        initStateJson["y"].get<double>(),
+        initStateJson["theta"].get<double>()
     };
     std::cout << "Loaded initial state from JSON: " << init_state << std::endl;
     
     // load target data
-    utilities::json target_json = utilities::load_json("src/cpp/robot/environment/target.json");
+    utilities::json targetJson = utilities::loadJson("src/cpp/robot/environment/target.json");
     std::vector<double> target{
-        target_json["x"].get<double>(),
-        target_json["y"].get<double>(),
-        target_json["theta"].get<double>()
+        targetJson["x"].get<double>(),
+        targetJson["y"].get<double>(),
+        targetJson["theta"].get<double>()
     };
     std::cout << "Loaded target from JSON: " << target << std::endl;
     
-    // load obstacle data as vectors of [x, y, r]
-    utilities::json obstacle_json = utilities::load_json("src/cpp/robot/environment/obstacles.json");
-    std::vector<std::vector<double>> obstacles{obstacle_json.size(), std::vector<double>(3, 0.0)};
-    size_t idx{0UL};
-    for (const auto& [key, value] : obstacle_json.items()) {
-        obstacles[idx][0] = value["x"].get<double>();
-        obstacles[idx][1] = value["y"].get<double>();
-        obstacles[idx][2] = value["r"].get<double>();
-        ++idx;
+    // Load obstacle data as vectors of [x, y, r]
+    utilities::json obstacleJson = utilities::loadJson("src/cpp/robot/environment/obstacles.json");
+    
+    // Extract safety margin (default to 0.0 if not specified)
+    double safetyMargin = obstacleJson.value("safety_margin", 0.0);
+    
+    // Build obstacle list
+    std::vector<std::vector<double>> obstacles;
+    obstacles.reserve(obstacleJson.size() - 1); // Reserve space (excluding safety_margin)
+    
+    for (const auto& [key, value] : obstacleJson.items()) {
+        if (key == "safety_margin") {
+            continue; // Skip non-obstacle entries
+        }
+        obstacles.push_back({
+            value["x"].get<double>(),
+            value["y"].get<double>(),
+            value["r"].get<double>()
+        });
     }
+    
     std::cout << "Loaded " << obstacles.size() << " obstacles from JSON." << std::endl;
+    std::cout << "Safety margin: " << safetyMargin << " m" << std::endl;
     std::cout << obstacles << std::endl;
 
+    // Create model and OCP
+    robot::Model bot{};
+    Ocp ocp(50, std::move(bot), safetyMargin, 0.2);
     ocp.setupOcp(std::move(obstacles));
     // ocp.generateCode();
     ocp.createInitialGuess();

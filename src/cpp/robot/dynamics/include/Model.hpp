@@ -6,20 +6,6 @@
  * including its parameters, states, controls, and discretized dynamics using CasADi.
  */
 
-/// @namespace robot
-/// @brief Namespace containing all robot dynamics related classes and functions.
-
-/**
- * @class Model
- * @brief Represents the robot dynamics model.
- *
- * The Model class provides an interface for storing and manipulating the robot's
- * dynamic parameters, states, controls, and discretized dynamics using CasADi symbolic expressions.
- */
-/*
- * Model class for robot dynamics
- */
-
 #ifndef ROBOT_DYNAMICS_MODEL_HPP
 #define ROBOT_DYNAMICS_MODEL_HPP
 
@@ -38,7 +24,8 @@
  */
 namespace robot {
 
-using cppDict = std::map<std::string, double>;
+// Import type alias from utilities namespace
+using utilities::cppDict;
 
 /**
  * @class Model
@@ -50,30 +37,21 @@ using cppDict = std::map<std::string, double>;
 class Model {
 
 public:
-    /**
-     * @brief Constructs a Model object with the given parameters.
-     * @param parameters_path Path to the parameters file.
-     */
-    Model(const std::string& parameters_path = PARAMETERS_FILE_PATH);
+    Model(const std::string& parameters_path = PARAMETERS_FILE_PATH); /**< Constructor loads parameters from a JSON file. */
+    ~Model() = default; /**< Default destructor. */
 
-    /**
-     * @brief Default destructor.
-     */
-    ~Model() = default;
+    Model(const Model&) = delete; /**< Copy constructor deleted. */
+    Model& operator=(const Model&) = delete; /**< Copy assignment operator deleted. */
 
-    // Copy and move constructors/operators deleted
-    Model(const Model&) = delete;
-    Model& operator=(const Model&) = delete;
-    // Move constructors/operators defaulted
-    Model(Model&&) = default;
-    Model& operator=(Model&&) = default;
+    Model(Model&&) = default; /**< Move constructor defaulted. */
+    Model& operator=(Model&&) = default; /**< Move assignment operator defaulted. */
 
     const cppDict& getParameters() const { return m_parameters; } /**< Model parameters. */
     const casadi::SX& getStates() const { return m_states; } /**< Model states. */
     const casadi::SX& getControls() const { return m_controls; } /**< Model controls. */
     const casadi::Function& getContinuousDynamics() const { return m_continuousDynamics; } /**< Continuous dynamics function. */
     const casadi::Function& getDiscretizedDynamics() const { return m_discretizedDynamics; } /**< Discretized dynamics function. */
-    const casadi::SX& getDiscStepSize() const { return m_disc_step_size; } /**< Discretization step size. */
+    const casadi::SX& getDiscStepSize() const { return m_discStepSize; } /**< Discretization step size. */
 
 private:
     // Member variables
@@ -82,7 +60,7 @@ private:
     casadi::SX m_controls; /**< Symbolic robot control inputs. */
     casadi::Function m_continuousDynamics; /**< Continuous dynamics function. */
     casadi::Function m_discretizedDynamics; /**< Discretized dynamics function. */
-    casadi::SX m_disc_step_size{casadi::SX::sym("disc_step_size", 1)}; /**< Discretization step size. */
+    casadi::SX m_discStepSize{casadi::SX::sym("discStepSize", 1)}; /**< Discretization step size. */
     // Member functions
     void computeContinuousDynamics();
     void discretizeContinuousDynamics(); /**< Discretizes the robot dynamics using CasADi. */

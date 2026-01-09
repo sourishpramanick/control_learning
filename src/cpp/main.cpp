@@ -2,13 +2,11 @@
 #include <fmt/core.h>
 #include <casadi/casadi.hpp>
 
-#include "robot/dynamics/include/Model.hpp"
 #include "robot/ocp/Ocp.hpp"
 #include "robot/ocp/Optimizer.hpp"
 #include "nlp_solver_generated.h"
 
 int main() {
-robot::Model bot{};
 
 // std::cout << "Robot states: " << bot.getStates() << std::endl;
 // std::cout << "Robot controls: " << bot.getControls() << std::endl;
@@ -29,10 +27,7 @@ robot::Model bot{};
 // })[0];
 // std::cout << "Next state after applying control: " << next_state << std::endl;
 
-Ocp::Ocp ocp(50, std::move(bot), 0.2);
-std::cout << "Simulation Step Size: " << ocp.getSimStep() << std::endl;
-
-Ocp::Optimizer::Optimize(std::move(ocp));
+Ocp::Optimizer::Optimize();
 
 return 0;
 }
