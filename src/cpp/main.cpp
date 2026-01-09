@@ -5,6 +5,7 @@
 #include "robot/dynamics/include/Model.hpp"
 #include "robot/ocp/Ocp.hpp"
 #include "robot/ocp/Optimizer.hpp"
+#include "nlp_solver_generated.h"
 
 int main() {
 robot::Model bot{};

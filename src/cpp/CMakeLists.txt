@@ -43,4 +43,5 @@ target_link_libraries(control_learning
         # local
         dynamics
         utilities
+        solver_code_gen
 )
