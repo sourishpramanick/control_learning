@@ -39,10 +39,10 @@ void Optimizer::Optimize(Ocp&& ocp) {
     std::cout << "Loaded " << obstacles.size() << " obstacles from JSON." << std::endl;
     std::cout << obstacles << std::endl;
 
-    ocp.setupOcp(std::move(obstacles), std::move(target));
-    ocp.generateCode();
+    ocp.setupOcp(std::move(obstacles));
+    // ocp.generateCode();
     ocp.createInitialGuess();
-    ocp.solveOcp(std::move(init_state));
+    ocp.solveOcp(std::move(init_state), std::move(target));
     ocp.extractSolution();
     // ocp.plotSolution();
     ocp.saveTrajectoriesToJson("ocp_solution.json");

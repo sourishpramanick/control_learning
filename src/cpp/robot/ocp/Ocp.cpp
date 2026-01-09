@@ -23,7 +23,7 @@ Ocp::Ocp(int N, robot::Model&& bot, double simStep)
 }
 
 void Ocp::setupOcp(
-    std::vector<std::vector<double>>&& obstacles, std::vector<double>&& target) {
+    std::vector<std::vector<double>>&& obstacles) {
     
     // symbolic variables for state and control trajectories
     casadi::SX state_traj{casadi::SX::sym("states", m_numStates, m_numIntervals)};
@@ -60,11 +60,7 @@ void Ocp::setupOcp(
     casadi::SX cost = casadi::SX::zeros(1);
 
     // construct target from input vector
-    casadi::SX target_state = casadi::SX::vertcat({
-        casadi::SX(target[0]), 
-        casadi::SX(target[1]), 
-        casadi::SX(target[2])
-    });
+    casadi::SX target_state{casadi::SX::sym("target_state", m_numStates, 1)};
 
     for (int node = 0; node < m_numIntervals - 1; ++node) {
         // states
@@ -100,7 +96,7 @@ void Ocp::setupOcp(
                 - casadi::SX::sq(x - obs[0]) - casadi::SX::sq(y - obs[1]) + casadi::SX::sq(obs[2])
             );
             lb_constraints.push_back(-casadi::inf);
-            ub_constraints.push_back(0.0);
+            ub_constraints.push_back(-0.5); // safety margin
         }
         /*********************************************/
 
@@ -144,7 +140,7 @@ void Ocp::setupOcp(
         casadi::SXDict{
             {"x", opt_variables},
             {"f", cost},
-            {"p", casadi::SX::vertcat({state_0})},
+            {"p", casadi::SX::vertcat({state_0, target_state})},
             {"g", opt_constraints}
         },
         nlp_options
@@ -160,7 +156,7 @@ void Ocp::generateCode() {
 
     // Save current working directory
     char cwd[PATH_MAX];
-    getcwd(cwd, sizeof(cwd));
+    auto result = getcwd(cwd, sizeof(cwd));
 
     // Target directory and filename
     std::string gen_dir = "src/c/robot/generated_code";
@@ -171,7 +167,7 @@ void Ocp::generateCode() {
     // Change to target directory, generate code, then restore directory
     if (chdir(gen_dir.c_str()) == 0) {
         m_nlpSolver.generate(gen_filename, gen_opts);
-        chdir(cwd);
+        auto result1 = chdir(cwd);
     } else {
         std::cerr << "Error: Could not change directory to " << gen_dir << std::endl;
     }
@@ -184,11 +180,11 @@ void Ocp::createInitialGuess() {
     m_initialGuess.resize(total_decision_vars, 1.0);
 } // createInitialGuess
 
-void Ocp::solveOcp(std::vector<double>&& initState) {
+void Ocp::solveOcp(std::vector<double>&& initState, std::vector<double>&& targetState) {
 
     casadi::DMDict arg = {
         {"x0", m_initialGuess},
-        {"p", initState},
+        {"p", casadi::DM::vertcat({casadi::DM(initState), casadi::DM(targetState)})},
         {"lbx", m_lbx},
         {"ubx", m_ubx},
         {"lbg", m_lbg},
