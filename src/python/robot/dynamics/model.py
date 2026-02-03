@@ -77,14 +77,14 @@ class Model:
         theta_dot = omega
         
         # Create continuous dynamics function
-        continuous_dynamics = ca.Function(
-            "continuous_dynamics",
+        m_continuousDynamics = ca.Function(
+            "m_continuousDynamics",
             [self._states, self._controls],
             [ca.vertcat(x_dot, y_dot, theta_dot)]
         )
         
         # Discretize using Runge-Kutta integration (5 steps, 4th order)
-        discretized_dynamics = ca.simpleRK(continuous_dynamics, 5, 4)
+        discretized_dynamics = ca.simpleRK(m_continuousDynamics, 5, 4)
         
         # Compute next states using the RK integrator
         # simpleRK expects: state, control, step_size

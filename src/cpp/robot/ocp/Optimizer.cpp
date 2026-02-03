@@ -62,7 +62,7 @@ void Optimizer::Optimize() {
     ocp.solveOcp(initState, target);
     ocp.extractSolution();
     // ocp.plotSolution();
-    // ocp.saveTrajectoriesToJson("ocp_solution.json");
+    ocp.saveTrajectoriesToJson("ocp_solution.json");
 
 } // Optimize
 
@@ -150,6 +150,7 @@ void Optimizer::MPC() {
             ocp.saveTrajectoriesToJson("ocp_solution.json");
             break;
         }
+        std::cout << "OCP solved successfully." << std::endl;
         ocp.extractSolution();
         // ocp.saveTrajectoriesToJson("ocp_solution.json");
         // Update initState for next iteration
@@ -185,7 +186,9 @@ void Optimizer::MPC() {
     }
     
     if (isClose(initState, target)) {
-        std::cout << "Destination reached." << std::endl;
+        std::cout << "✓ Destination reached successfully!" << std::endl;
+    } else {
+        std::cout << "✗ Did not reach destination." << std::endl;
     }
 } // MPC
 
