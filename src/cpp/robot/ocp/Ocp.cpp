@@ -121,11 +121,10 @@ void Ocp::setupOcp(
     lbDecisionVars.insert(lbDecisionVars.end(), m_numStates, -casadi::inf);
     ubDecisionVars.insert(ubDecisionVars.end(), m_numStates, casadi::inf);
     // No control at final node
-    // Add cost for final state
-    cost += casadi::SX::dot(
-        stateTraj(casadi::Slice(), m_numIntervals - 1) - targetState,
-        stateTraj(casadi::Slice(), m_numIntervals - 1) - targetState
-    );
+    // Add cost for final state with weighted terminal cost
+    casadi::SX Qf = casadi::SX::diag(casadi::SX({100.0, 100.0, 100.0}));
+    auto dev = stateTraj(casadi::Slice(), m_numIntervals - 1) - targetState;
+    cost += casadi::SX::mtimes(casadi::SX::mtimes(dev.T(), Qf), dev);
 
     // concatenate decision variables and constraints
     casadi::SX optVariables = casadi::SX::vertcat(decisionVariables);
@@ -134,7 +133,8 @@ void Ocp::setupOcp(
     // create NLP problem
     casadi::Dict nlp_options;
     nlp_options["ipopt.print_level"] = 0;
-    nlp_options["print_time"] = true;
+    nlp_options["print_time"] = false;
+    nlp_options["ipopt.max_iter"] = 1000;
     m_nlpSolver = casadi::nlpsol(
         "nlp_solver",
         "ipopt",
@@ -185,7 +185,7 @@ void Ocp::createInitialGuess() {
     m_initialGuess.resize(totalDecisionVars, 1.0);
 } // createInitialGuess
 
-void Ocp::solveOcp(std::vector<double>&& initState, std::vector<double>&& targetState) {
+int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double>& targetState) {
 
     casadi::DMDict arg = {
         {"x0", m_initialGuess},
@@ -202,8 +202,10 @@ void Ocp::solveOcp(std::vector<double>&& initState, std::vector<double>&& target
 
     if(static_cast<int>(m_nlpSolver.stats()["success"]) == 1) {
         std::cout << "OCP solved successfully." << std::endl;
+        return 0;  // Success
     } else {
         std::cerr << "OCP solver failed." << std::endl;
+        return 1;  // Failure
     }
 
 } // solveOcp

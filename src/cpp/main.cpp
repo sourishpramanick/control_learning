@@ -27,7 +27,8 @@ int main() {
 // })[0];
 // std::cout << "Next state after applying control: " << next_state << std::endl;
 
-Ocp::Optimizer::Optimize();
+// Ocp::Optimizer::Optimize();
+Ocp::Optimizer::MPC();
 
 return 0;
 }

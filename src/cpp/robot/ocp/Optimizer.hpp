@@ -17,6 +17,7 @@ class Optimizer {
 public:
 static void Optimize(); /**< Solve the given OCP problem. */
 static void OptimizeCodeGen(); /**< Solve the OCP problem using generated code from solver. */
+static void MPC(); /**< Run MPC loop using the OCP solver. */
 }; // Optimizer
 } // Ocp
 

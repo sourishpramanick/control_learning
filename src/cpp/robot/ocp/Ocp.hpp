@@ -59,9 +59,9 @@ private:
     void setupOcp(std::vector<std::vector<double>>&& obstacles={}); /**< Setup the OCP problem. */
     void generateCode(); /**< Generate code for the OCP solver. */
     void createInitialGuess(); /**< Create an initial guess for the solver. */
-    void solveOcp(
-        std::vector<double>&& initState={0.0, 0.0, 0.0}, 
-        std::vector<double>&& targetState={10.0, 10.0, 0.0}); /**< Solve the OCP problem. */
+    int solveOcp(
+        const std::vector<double>& initState={0.0, 0.0, 0.0}, 
+        const std::vector<double>& targetState={10.0, 10.0, 0.0}); /**< Solve the OCP problem. */
     void extractSolution(); /**< Extract the solution from the solver. */
     void plotSolution(); /**< Plot the solution trajectories. */
     void saveTrajectoriesToJson(const std::string& filename) const; /**< Save trajectories to a JSON file. */
