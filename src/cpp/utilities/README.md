@@ -196,7 +196,7 @@ The `printMap` function uses `std::variant` to handle heterogeneous value types:
 **Use Case:**
 - Debugging parameter loading
 - Verifying configuration values
-- Currently commented out in production code but useful for development
+- Development and testing (can be enabled when debugging nested parameters)
 
 ## Dependencies
 
