@@ -60,7 +60,7 @@ void Ocp::setupOcp(
     // initialize cost function
     casadi::SX cost = casadi::SX::zeros(1);
 
-    // construct target from input vector
+    // construct symbolic target to be passed as parameter at solve time to avoid recompilation
     casadi::SX targetState{casadi::SX::sym("targetState", m_numStates, 1)};
 
     for (int node = 0; node < m_numIntervals - 1; ++node) {
