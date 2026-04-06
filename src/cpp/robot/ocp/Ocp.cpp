@@ -24,8 +24,9 @@ Ocp::Ocp(int N, robot::Model&& bot, double safetyMargin, double simStep)
 }
 
 void Ocp::setupOcp(
-    std::vector<std::vector<double>>&& obstacles) {
-    
+    std::vector<std::vector<double>>&& floorspace,
+    std::vector<std::vector<double>>&& obstacles
+) {
     // symbolic variables for state and control trajectories
     casadi::SX stateTraj{casadi::SX::sym("states", m_numStates, m_numIntervals)};
     casadi::SX controlTraj{casadi::SX::sym("controls", m_numControls, m_numIntervals-1)};
@@ -63,13 +64,39 @@ void Ocp::setupOcp(
     // construct symbolic target to be passed as parameter at solve time to avoid recompilation
     casadi::SX targetState{casadi::SX::sym("targetState", m_numStates, 1)};
 
+    // Construct the ranges of the states and controls
+    casadi::SX stateRange = casadi::SX::vertcat({
+        floorspace[0][1] - floorspace[0][0], // x range
+        floorspace[1][1] - floorspace[1][0], // y range
+        2 * M_PI // theta range (full rotation)
+    });
+    casadi::SX controlRange = casadi::SX::vertcat({
+        m_model.getParameters().at("max_velocity") - m_model.getParameters().at("min_velocity"),
+        m_model.getParameters().at("max_angular_velocity") - m_model.getParameters().at("min_angular_velocity")
+    });
+
+    // Construct the Q and R matrices
+    casadi::SX Q = casadi::SX::diag(casadi::SX::vertcat({
+        m_xDevWeight / (stateRange(0) * stateRange(0)), // weight for x deviation
+        m_yDevWeight / (stateRange(1) * stateRange(1)), // weight for y deviation
+        m_thetaDevWeight / (stateRange(2) * stateRange(2))  // weight for theta deviation
+    }));
+    casadi::SX R = casadi::SX::diag(
+            casadi::SX::vertcat({
+                1.0 / (controlRange(0) * controlRange(0)),
+                1.0 / (controlRange(1) * controlRange(1))
+            })
+        );
+
     for (int node = 0; node < m_numIntervals - 1; ++node) {
         // states
-        decisionVariables.push_back(stateTraj(casadi::Slice(), node));
+        auto states = stateTraj(casadi::Slice(), node);
+        decisionVariables.push_back(states);
         lbDecisionVars.insert(lbDecisionVars.end(), m_numStates, -casadi::inf);
         ubDecisionVars.insert(ubDecisionVars.end(), m_numStates, casadi::inf);
         // controls
-        decisionVariables.push_back(controlTraj(casadi::Slice(), node));
+        auto controls = controlTraj(casadi::Slice(), node);
+        decisionVariables.push_back(controls);
         // Create lower and upper bounds for controls at this node
         lbDecisionVars.insert(lbDecisionVars.end(), lbControl.begin(), lbControl.end());
         ubDecisionVars.insert(ubDecisionVars.end(), ubControl.begin(), ubControl.end());
@@ -80,8 +107,8 @@ void Ocp::setupOcp(
         constraints.push_back(
             m_model.getDiscretizedDynamics()(
                 casadi::SXVector{ 
-                    stateTraj(casadi::Slice(), node),
-                    controlTraj(casadi::Slice(), node),
+                    states,
+                    controls,
                     casadi::DM(m_simStep)}
             )[0] - stateTraj(casadi::Slice(), node + 1)
         );
@@ -90,11 +117,9 @@ void Ocp::setupOcp(
         /*********************************************/
 
         /* Path Constraints **************************/
-        auto x = stateTraj(0, node);
-        auto y = stateTraj(1, node);
         for (const auto& obs : obstacles) {
             constraints.push_back(
-                - casadi::SX::sq(x - obs[0]) - casadi::SX::sq(y - obs[1]) + casadi::SX::sq(obs[2])
+                - casadi::SX::sq(states(0) - obs[0]) - casadi::SX::sq(states(1) - obs[1]) + casadi::SX::sq(obs[2])
             );
             lbConstraints.push_back(-casadi::inf);
             ubConstraints.push_back(-m_obstacleSafetyMargin); // safety margin
@@ -103,16 +128,12 @@ void Ocp::setupOcp(
 
         /* Cost Function *****************************/
         // cost due to control effort
-        cost += casadi::SX::dot(
-            controlTraj(casadi::Slice(), node),
-            controlTraj(casadi::Slice(), node)
-        );
+        cost += casadi::SX::mtimes(casadi::SX::mtimes(controls.T(), R), controls);
 
         // cost due to state deviation from [target[0], target[1], target[2]]
-        cost += casadi::SX::dot(
-            stateTraj(casadi::Slice(), node) - targetState,
-            stateTraj(casadi::Slice(), node) - targetState
-        );
+        cost += casadi::SX::mtimes(
+            casadi::SX::mtimes((states - targetState).T(), Q), (states - targetState)
+        ) ;
         /*********************************************/
     }
 
@@ -199,6 +220,8 @@ int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double
     m_sol = m_nlpSolver(arg);
 
     m_optx = m_sol.at("x").nonzeros();
+
+    m_initialGuess = m_optx; // update initial guess for next solve
 
     if(static_cast<int>(m_nlpSolver.stats()["success"]) == 1) {
         std::cout << "OCP solved successfully." << std::endl;

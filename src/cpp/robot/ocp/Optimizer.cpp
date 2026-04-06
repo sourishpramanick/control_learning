@@ -10,6 +10,15 @@
 namespace Ocp {
 
 void Optimizer::Optimize() {
+    // load floor space
+    utilities::json floorJson = utilities::loadJson("src/cpp/robot/environment/space.json");
+    std::vector<std::vector<double>> floorSpace{};
+    for (const auto& [key, value] : floorJson.items()) {
+        floorSpace.push_back({
+            value["min"].get<double>(),
+            value["max"].get<double>()
+        });
+    }
     // load initial state data
     utilities::json initStateJson = utilities::loadJson("src/cpp/robot/environment/initial_state.json");
     std::vector<double> initState{
@@ -56,7 +65,7 @@ void Optimizer::Optimize() {
     // Create model and OCP
     robot::Model bot{};
     Ocp ocp(50, std::move(bot), safetyMargin, 0.2);
-    ocp.setupOcp(std::move(obstacles));
+    ocp.setupOcp(std::move(floorSpace), std::move(obstacles));
     // ocp.generateCode();
     ocp.createInitialGuess();
     ocp.solveOcp(initState, target);
@@ -67,6 +76,15 @@ void Optimizer::Optimize() {
 } // Optimize
 
 void Optimizer::MPC() {
+    // load floor space
+    utilities::json floorJson = utilities::loadJson("src/cpp/robot/environment/space.json");
+    std::vector<std::vector<double>> floorSpace{};
+    for (const auto& [key, value] : floorJson.items()) {
+        floorSpace.push_back({
+            value["min"].get<double>(),
+            value["max"].get<double>()
+        });
+    }
     // Load initial state data
     utilities::json initStateJson = utilities::loadJson("src/cpp/robot/environment/initial_state.json");
     std::vector<double> initState{
@@ -122,7 +140,7 @@ void Optimizer::MPC() {
     // Create model and OCP
     robot::Model bot{};
     Ocp ocp(20, std::move(bot), safetyMargin, 0.2);
-    ocp.setupOcp(std::move(obstacles));
+    ocp.setupOcp(std::move(floorSpace),std::move(obstacles));
     ocp.createInitialGuess();
 
     // create json file with empty arrays or clear existing file
