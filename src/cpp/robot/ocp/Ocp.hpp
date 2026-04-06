@@ -72,6 +72,8 @@ private:
     double m_xDevWeight{10.0}; /**< Weight for x deviation in the cost function. */
     double m_yDevWeight{10.0}; /**< Weight for y deviation in the cost function. */
     double m_thetaDevWeight{1.0}; /**< Weight for theta deviation in the cost function. */
+    double m_vWeight{1.0};      /**< Weight for velocity effort */
+    double m_omegaWeight{1.0};  /**< Weight for angular velocity effort */
     double m_obstacleSafetyMargin; /**< Safety margin around obstacles. */
     double m_simStep;  /**< Simulation step size. */
     int m_numIntervals; /**< Number of intervals in the discretization. */

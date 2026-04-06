@@ -161,7 +161,8 @@ void Optimizer::MPC() {
         }
     }
 
-    while (!isClose(initState, target)) {
+    int iter = 0;
+    while (!isClose(initState, target) && iter < Optimizer::MAX_MPC_ITERATIONS) {
         if(ocp.solveOcp(initState, target)) {
             std::cerr << "MPC OCP solve failed, stopping MPC loop." << std::endl;
             ocp.extractSolution();
@@ -201,6 +202,7 @@ void Optimizer::MPC() {
                 trajFileOut << trajJson.dump(4);
             }
         }
+        iter++;
     }
     
     if (isClose(initState, target)) {

@@ -75,6 +75,18 @@ void Ocp::setupOcp(
         m_model.getParameters().at("max_angular_velocity") - m_model.getParameters().at("min_angular_velocity")
     });
 
+    // state lower and upper bounds based on floor space
+    std::vector<double> lbState{
+        floorspace[0][0], // x min
+        floorspace[1][0], // y min
+        -M_PI            // theta min
+    };
+    std::vector<double> ubState{
+        floorspace[0][1], // x max
+        floorspace[1][1], // y max
+        M_PI             // theta max
+    };
+
     // Construct the Q and R matrices
     casadi::SX Q = casadi::SX::diag(casadi::SX::vertcat({
         m_xDevWeight / (stateRange(0) * stateRange(0)), // weight for x deviation
@@ -83,8 +95,8 @@ void Ocp::setupOcp(
     }));
     casadi::SX R = casadi::SX::diag(
             casadi::SX::vertcat({
-                1.0 / (controlRange(0) * controlRange(0)),
-                1.0 / (controlRange(1) * controlRange(1))
+                m_vWeight / (controlRange(0) * controlRange(0)),
+                m_omegaWeight / (controlRange(1) * controlRange(1))
             })
         );
 
@@ -92,8 +104,8 @@ void Ocp::setupOcp(
         // states
         auto states = stateTraj(casadi::Slice(), node);
         decisionVariables.push_back(states);
-        lbDecisionVars.insert(lbDecisionVars.end(), m_numStates, -casadi::inf);
-        ubDecisionVars.insert(ubDecisionVars.end(), m_numStates, casadi::inf);
+        lbDecisionVars.insert(lbDecisionVars.end(), lbState.begin(), lbState.end());
+        ubDecisionVars.insert(ubDecisionVars.end(), ubState.begin(), ubState.end());
         // controls
         auto controls = controlTraj(casadi::Slice(), node);
         decisionVariables.push_back(controls);
@@ -141,8 +153,8 @@ void Ocp::setupOcp(
 
     // Final state
     decisionVariables.push_back(stateTraj(casadi::Slice(), m_numIntervals - 1));
-    lbDecisionVars.insert(lbDecisionVars.end(), m_numStates, -casadi::inf);
-    ubDecisionVars.insert(ubDecisionVars.end(), m_numStates, casadi::inf);
+    lbDecisionVars.insert(lbDecisionVars.end(), lbState.begin(), lbState.end());
+    ubDecisionVars.insert(ubDecisionVars.end(), ubState.begin(), ubState.end());
     // No control at final node
     // Add cost for final state with weighted terminal cost
     casadi::SX Qf = 10 * Q; // terminal cost weight (can be tuned)
@@ -158,6 +170,17 @@ void Ocp::setupOcp(
     nlp_options["ipopt.print_level"] = 0;
     nlp_options["print_time"] = false;
     nlp_options["ipopt.max_iter"] = 1000;
+    nlp_options["ipopt.warm_start_init_point"] = "yes";
+    nlp_options["ipopt.warm_start_init_point"] = "yes";
+    nlp_options["ipopt.warm_start_bound_push"] = 1e-9;
+    nlp_options["ipopt.warm_start_mult_bound_push"] = 1e-9;
+    nlp_options["ipopt.warm_start_slack_bound_push"] = 1e-9;
+    nlp_options["ipopt.mu_init"] = 1e-3;              // Barrier parameter
+    nlp_options["ipopt.mu_strategy"] = "adaptive";
+    nlp_options["ipopt.tol"] = 1e-4;                  // Looser for real-time
+    nlp_options["ipopt.acceptable_tol"] = 1e-3;
+    nlp_options["ipopt.acceptable_iter"] = 5;
+    nlp_options["ipopt.max_cpu_time"] = 0.2;          // Real-time deadline (200ms)
     m_nlpSolver = casadi::nlpsol(
         "nlp_solver",
         "ipopt",
@@ -210,6 +233,7 @@ void Ocp::createInitialGuess() {
 
 int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double>& targetState) {
 
+    auto start = std::chrono::high_resolution_clock::now();
     casadi::DMDict arg = {
         {"x0", m_initialGuess},
         {"p", casadi::DM::vertcat({casadi::DM(initState), casadi::DM(targetState)})},
@@ -221,6 +245,10 @@ int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double
     
     m_sol = m_nlpSolver(arg);
 
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Solver time: " << elapsed.count() << " seconds" << std::endl;
+    
     m_optx = m_sol.at("x").nonzeros();
 
     m_initialGuess = m_optx; // update initial guess for next solve
