@@ -69,8 +69,8 @@ private:
     void saveTrajectoriesToJson(const std::string& filename) const; /**< Save trajectories to a JSON file. */
 
     // attributes
-    double m_xDevWeight{100.0}; /**< Weight for x deviation in the cost function. */
-    double m_yDevWeight{100.0}; /**< Weight for y deviation in the cost function. */
+    double m_xDevWeight{10.0}; /**< Weight for x deviation in the cost function. */
+    double m_yDevWeight{10.0}; /**< Weight for y deviation in the cost function. */
     double m_thetaDevWeight{1.0}; /**< Weight for theta deviation in the cost function. */
     double m_obstacleSafetyMargin; /**< Safety margin around obstacles. */
     double m_simStep;  /**< Simulation step size. */

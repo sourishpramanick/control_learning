@@ -118,11 +118,13 @@ void Ocp::setupOcp(
 
         /* Path Constraints **************************/
         for (const auto& obs : obstacles) {
-            constraints.push_back(
-                - casadi::SX::sq(states(0) - obs[0]) - casadi::SX::sq(states(1) - obs[1]) + casadi::SX::sq(obs[2])
-            );
+            // Obstacle avoidance constraint: distance from obstacle center >= radius + safety margin
+            casadi::SX obsRadius = obs[2] + m_obstacleSafetyMargin;
+            casadi::SX distSq = casadi::SX::sq(states(0) - obs[0]) + 
+                                casadi::SX::sq(states(1) - obs[1]);
+            constraints.push_back(casadi::SX::sq(obsRadius) - distSq);
             lbConstraints.push_back(-casadi::inf);
-            ubConstraints.push_back(-m_obstacleSafetyMargin); // safety margin
+            ubConstraints.push_back(0.0); // safety margin
         }
         /*********************************************/
 
@@ -143,7 +145,7 @@ void Ocp::setupOcp(
     ubDecisionVars.insert(ubDecisionVars.end(), m_numStates, casadi::inf);
     // No control at final node
     // Add cost for final state with weighted terminal cost
-    casadi::SX Qf = casadi::SX::diag(casadi::SX({100.0, 100.0, 100.0}));
+    casadi::SX Qf = 10 * Q; // terminal cost weight (can be tuned)
     auto dev = stateTraj(casadi::Slice(), m_numIntervals - 1) - targetState;
     cost += casadi::SX::mtimes(casadi::SX::mtimes(dev.T(), Qf), dev);
 
