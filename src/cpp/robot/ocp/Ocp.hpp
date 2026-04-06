@@ -31,9 +31,13 @@ public:
      * @brief Constructs an Ocp object with the given number of intervals and robot model.
      * @param N Number of intervals in the discretization.
      * @param bot Robot dynamics model.
-     * @param simStep Simulation step size (default: 0.1).
+     * @param safetyMargin Safety margin around obstacles (metres).
+     * @param simStep Simulation step size (seconds).
+     * @param maxCpuTime IPOPT CPU time limit per solve (seconds).
+     *        Use a large value (e.g. 5.0) for offline/dataset solving;
+     *        set to 0.2 for real-time MPC.
      */
-    Ocp(int N, robot::Model&& bot, double safetyMargin = 0.0, double simStep = 0.1);
+    Ocp(int N, robot::Model&& bot, double safetyMargin = 0.0, double simStep = 0.1, double maxCpuTime = 5.0);
     ~Ocp() = default; /**< Default destructor. */
 
     // methods
@@ -75,6 +79,7 @@ private:
     double m_vWeight{1.0};      /**< Weight for velocity effort */
     double m_omegaWeight{1.0};  /**< Weight for angular velocity effort */
     double m_obstacleSafetyMargin; /**< Safety margin around obstacles. */
+    double m_maxCpuTime; /**< IPOPT CPU time limit per solve (seconds). */
     double m_simStep;  /**< Simulation step size. */
     int m_numIntervals; /**< Number of intervals in the discretization. */
     robot::Model m_model; /**< Robot dynamics model. */

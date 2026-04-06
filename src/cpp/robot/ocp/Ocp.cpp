@@ -12,13 +12,14 @@
 
 namespace Ocp {
 
-Ocp::Ocp(int N, robot::Model&& bot, double safetyMargin, double simStep)
+Ocp::Ocp(int N, robot::Model&& bot, double safetyMargin, double simStep, double maxCpuTime)
     : m_numIntervals(N),
       m_model(std::move(bot)),
       m_numStates(m_model.getStates().size1()),
       m_numControls(m_model.getControls().size1()),
       m_simStep(simStep),
-      m_obstacleSafetyMargin(safetyMargin)
+      m_obstacleSafetyMargin(safetyMargin),
+      m_maxCpuTime(maxCpuTime)
 {
     // Constructor implementation (if needed)
 }
@@ -180,7 +181,7 @@ void Ocp::setupOcp(
     nlp_options["ipopt.tol"] = 1e-4;                  // Looser for real-time
     nlp_options["ipopt.acceptable_tol"] = 1e-3;
     nlp_options["ipopt.acceptable_iter"] = 5;
-    nlp_options["ipopt.max_cpu_time"] = 0.2;          // Real-time deadline (200ms)
+    nlp_options["ipopt.max_cpu_time"] = m_maxCpuTime;  // 0.2 s for MPC; larger for offline solving
     m_nlpSolver = casadi::nlpsol(
         "nlp_solver",
         "ipopt",
@@ -253,11 +254,23 @@ int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double
 
     m_initialGuess = m_optx; // update initial guess for next solve
 
-    if(static_cast<int>(m_nlpSolver.stats()["success"]) == 1) {
+    const std::string returnStatus{
+        static_cast<std::string>(m_nlpSolver.stats().at("return_status"))
+    };
+
+    // Only accept solutions that IPOPT explicitly certified as optimal or
+    // acceptable. Maximum_CpuTime_Exceeded is rejected: CasADi does not
+    // expose inf_pr in its stats map at print_level=0, so we cannot verify
+    // feasibility of the interrupted iterate — it may violate obstacle or
+    // dynamics constraints.
+    const bool success = (returnStatus == "Solve_Succeeded"
+                          || returnStatus == "Solved_To_Acceptable_Level");
+
+    if (success) {
         std::cout << "OCP solved successfully." << std::endl;
         return 0;  // Success
     } else {
-        std::cerr << "OCP solver failed." << std::endl;
+        std::cerr << "OCP solver failed. Status: " << returnStatus << std::endl;
         return 1;  // Failure
     }
 
