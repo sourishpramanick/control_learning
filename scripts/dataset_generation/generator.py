@@ -14,9 +14,9 @@ Input vector  (22,):
      obs1_x, obs1_y, obs1_r, …, obs5_x, obs5_y, obs5_r,
      safety_margin]
 
-Output vector (248,):
-    [v0, ω0, v1, ω1, …, v48, ω48,          ← 98  control values
-     x0, y0, θ0, x1, y1, θ1, …, x49, y49, θ49]  ← 150 state  values
+Output vector (cfg.OUTPUT_SIZE,):  where N = cfg.N_INTERVALS (set in config.py)
+    [v0, ω0, v1, ω1, …, v{N-2}, ω{N-2}]               ← 2*(N-1) control values
+    [x0, y0, θ0, x1, y1, θ1, …, x{N-1}, y{N-1}, θ{N-1}]  ← 3*N state values
 
 Usage (from project root, mpc_dl conda env):
     python scripts/dataset_generation/generator.py [OPTIONS]
@@ -56,14 +56,14 @@ def input_column_names() -> list[str]:
     for k in range(cfg.N_OBSTACLES):
         names += [f"obs{k + 1}_x", f"obs{k + 1}_y", f"obs{k + 1}_r"]
     names.append("safety_margin")
-    return names   # length == cfg.INPUT_SIZE == 22
+    return names   # length == cfg.INPUT_SIZE
 
 
 def output_column_names() -> list[str]:
     """Return the ordered list of output label names."""
     ctrl = [c for k in range(cfg.N_CONTROLS_PER_TRAJ) for c in (f"v{k}", f"omega{k}")]
     state = [c for k in range(cfg.N_STATES_PER_TRAJ) for c in (f"x{k}", f"y{k}", f"theta{k}")]
-    return ctrl + state   # length == cfg.OUTPUT_SIZE == 248
+    return ctrl + state   # length == cfg.OUTPUT_SIZE
 
 
 # ── Free-space sampling ────────────────────────────────────────────────────────
@@ -121,6 +121,7 @@ def _solve_one(seed: int) -> Optional[tuple[np.ndarray, np.ndarray]]:
                 "--init",   str(x0),    str(y0),    str(theta0),
                 "--target", str(xT),    str(yT),    str(thetaT),
                 "--output", output_path,
+                "--horizon", str(cfg.N_INTERVALS),
             ],
             capture_output=True,
             timeout=cfg.SOLVER_TIMEOUT_S,
@@ -146,11 +147,9 @@ def _solve_one(seed: int) -> Optional[tuple[np.ndarray, np.ndarray]]:
                 or len(x_raw) < cfg.N_STATES_PER_TRAJ):
             return None
 
-        # Slice off the trailing garbage values produced by the off-by-one in
-        # Ocp::extractSolution (see code comment in Ocp.cpp):
-        #   - controls: indices 0 … N-2  (49 valid values)
-        #   - states:   indices 0 … N-1  (50 valid values; last entry is a
-        #               duplicate terminal node that we keep for completeness)
+        # Slice to the expected trajectory lengths defined by config.
+        # The JSON may contain more values than needed (e.g. if N changed),
+        # so we always take exactly N_CONTROLS_PER_TRAJ and N_STATES_PER_TRAJ.
         v     = np.asarray(v_raw[:cfg.N_CONTROLS_PER_TRAJ],     dtype=np.float32)
         omega = np.asarray(omega_raw[:cfg.N_CONTROLS_PER_TRAJ], dtype=np.float32)
         xs    = np.asarray(x_raw[:cfg.N_STATES_PER_TRAJ],       dtype=np.float32)
@@ -164,17 +163,24 @@ def _solve_one(seed: int) -> Optional[tuple[np.ndarray, np.ndarray]]:
             dtype=np.float32,
         )
 
-        # ── Assemble output vector (248,) ──
-        # Controls interleaved: v0, ω0, v1, ω1, … (shape 98)
+        # ── Assemble output vector (cfg.OUTPUT_SIZE,) ──
+        # Controls interleaved: v0, ω0, v1, ω1, … (indices 0..2*cfg.N_CONTROLS_PER_TRAJ-1)
         ctrl_interleaved = np.empty(2 * cfg.N_CONTROLS_PER_TRAJ, dtype=np.float32)
         ctrl_interleaved[0::2] = v
         ctrl_interleaved[1::2] = omega
 
-        # States interleaved: x0,y0,θ0, x1,y1,θ1, … (shape 150)
+        # States interleaved: x0,y0,θ0, x1,y1,θ1, … (indices 2*cfg.N_CONTROLS_PER_TRAJ..cfg.OUTPUT_SIZE-1)
         state_interleaved = np.empty(3 * cfg.N_STATES_PER_TRAJ, dtype=np.float32)
         state_interleaved[0::3] = xs
         state_interleaved[1::3] = ys
         state_interleaved[2::3] = ts
+
+        # Bug 4 fix: IPOPT's equality constraint state[0] = initState is satisfied
+        # only up to acceptable_tol (~1e-3). Override the t=0 state triplet with
+        # the exact Python-sampled values so input[0:3] == output[2*cfg.N_CONTROLS_PER_TRAJ:2*cfg.N_CONTROLS_PER_TRAJ+3] exactly.
+        state_interleaved[0] = np.float32(x0)
+        state_interleaved[1] = np.float32(y0)
+        state_interleaved[2] = np.float32(theta0)
 
         output_vec = np.concatenate([ctrl_interleaved, state_interleaved])
 

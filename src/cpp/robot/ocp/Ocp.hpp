@@ -64,7 +64,9 @@ private:
         std::vector<std::vector<double>>&& floorspace,
         std::vector<std::vector<double>>&& obstacles={}); 
     void generateCode(); /**< Generate code for the OCP solver. */
-    void createInitialGuess(); /**< Create an initial guess for the solver. */
+    void createInitialGuess(/**< Create a linearly-interpolated initial guess from initState to targetState with zero controls. */
+        const std::vector<double>& initState,
+        const std::vector<double>& targetState); 
     int solveOcp(/**< Solve the OCP problem. */
         const std::vector<double>& initState={0.0, 0.0, 0.0}, 
         const std::vector<double>& targetState={10.0, 10.0, 0.0});
@@ -77,7 +79,7 @@ private:
     double m_yDevWeight{10.0}; /**< Weight for y deviation in the cost function. */
     double m_thetaDevWeight{1.0}; /**< Weight for theta deviation in the cost function. */
     double m_vWeight{1.0};      /**< Weight for velocity effort */
-    double m_omegaWeight{1.0};  /**< Weight for angular velocity effort */
+    double m_omegaWeight{1e-3};  /**< Weight for angular velocity effort */
     double m_obstacleSafetyMargin; /**< Safety margin around obstacles. */
     double m_maxCpuTime; /**< IPOPT CPU time limit per solve (seconds). */
     double m_simStep;  /**< Simulation step size. */

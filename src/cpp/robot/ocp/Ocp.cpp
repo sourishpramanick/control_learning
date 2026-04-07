@@ -80,12 +80,12 @@ void Ocp::setupOcp(
     std::vector<double> lbState{
         floorspace[0][0], // x min
         floorspace[1][0], // y min
-        -M_PI            // theta min
+        -2.0*M_PI            // theta min
     };
     std::vector<double> ubState{
         floorspace[0][1], // x max
         floorspace[1][1], // y max
-        M_PI             // theta max
+        2.0*M_PI             // theta max
     };
 
     // Construct the Q and R matrices
@@ -145,10 +145,30 @@ void Ocp::setupOcp(
         // cost due to control effort
         cost += casadi::SX::mtimes(casadi::SX::mtimes(controls.T(), R), controls);
 
-        // cost due to state deviation from [target[0], target[1], target[2]]
-        cost += casadi::SX::mtimes(
-            casadi::SX::mtimes((states - targetState).T(), Q), (states - targetState)
-        ) ;
+        // cost due to state deviation.
+        //
+        // Theta wrapping:
+        //   A naive squared error  (θ - θ_T)²  treats angle as a linear quantity.
+        //   When θ is unbounded, the gradient  2(θ - θ_T)  always pushes θ toward
+        //   θ_T by the shortest linear path — which can be the *long* way around
+        //   the circle.  For example, θ = −177°, θ_T = 0°: the raw difference is
+        //   −177°, so the gradient says "rotate CCW by 177°".  But rotating CW by
+        //   183° also reaches 0° and the gradient never considers that option
+        //   because going CW increases |θ − θ_T| at first.
+        //
+        //   The fix is to replace  (θ − θ_T)  with the *geodesic* angular error:
+        //
+        //     Δθ_wrapped = atan2( sin(θ − θ_T),  cos(θ − θ_T) )
+        //
+        //   This always returns a value in (−π, π], which is the shortest signed
+        //   arc between the two headings on the unit circle.  The gradient of
+        //   Δθ_wrapped²  with respect to θ always points in the direction of the
+        //   shorter rotation, so IPOPT naturally chooses the minimal spin.
+        casadi::SX stateErr = states - targetState;
+        stateErr(2) = casadi::SX::atan2(
+            casadi::SX::sin(states(2) - targetState(2)),
+            casadi::SX::cos(states(2) - targetState(2)));
+        cost += casadi::SX::mtimes(casadi::SX::mtimes(stateErr.T(), Q), stateErr);
         /*********************************************/
     }
 
@@ -156,11 +176,16 @@ void Ocp::setupOcp(
     decisionVariables.push_back(stateTraj(casadi::Slice(), m_numIntervals - 1));
     lbDecisionVars.insert(lbDecisionVars.end(), lbState.begin(), lbState.end());
     ubDecisionVars.insert(ubDecisionVars.end(), ubState.begin(), ubState.end());
-    // No control at final node
-    // Add cost for final state with weighted terminal cost
-    casadi::SX Qf = 10 * Q; // terminal cost weight (can be tuned)
-    auto dev = stateTraj(casadi::Slice(), m_numIntervals - 1) - targetState;
-    cost += casadi::SX::mtimes(casadi::SX::mtimes(dev.T(), Qf), dev);
+    // No control at final node.
+    // Terminal cost: same wrapped-theta formulation as the stage cost (see above),
+    // with weight Qf = 10·Q to strongly penalise the final heading error.
+    casadi::SX Qf = 10 * Q;
+    casadi::SX termState = stateTraj(casadi::Slice(), m_numIntervals - 1);
+    casadi::SX termErr   = termState - targetState;
+    termErr(2) = casadi::SX::atan2(
+        casadi::SX::sin(termState(2) - targetState(2)),
+        casadi::SX::cos(termState(2) - targetState(2)));
+    cost += casadi::SX::mtimes(casadi::SX::mtimes(termErr.T(), Qf), termErr);
 
     // concatenate decision variables and constraints
     casadi::SX optVariables = casadi::SX::vertcat(decisionVariables);
@@ -171,12 +196,6 @@ void Ocp::setupOcp(
     nlp_options["ipopt.print_level"] = 0;
     nlp_options["print_time"] = false;
     nlp_options["ipopt.max_iter"] = 1000;
-    nlp_options["ipopt.warm_start_init_point"] = "yes";
-    nlp_options["ipopt.warm_start_init_point"] = "yes";
-    nlp_options["ipopt.warm_start_bound_push"] = 1e-9;
-    nlp_options["ipopt.warm_start_mult_bound_push"] = 1e-9;
-    nlp_options["ipopt.warm_start_slack_bound_push"] = 1e-9;
-    nlp_options["ipopt.mu_init"] = 1e-3;              // Barrier parameter
     nlp_options["ipopt.mu_strategy"] = "adaptive";
     nlp_options["ipopt.tol"] = 1e-4;                  // Looser for real-time
     nlp_options["ipopt.acceptable_tol"] = 1e-3;
@@ -226,10 +245,34 @@ void Ocp::generateCode() {
 
 } // generateCode
 
-void Ocp::createInitialGuess() {
-    // create a simple initial guess (ones)
-    int totalDecisionVars = m_lbx.size();
-    m_initialGuess.resize(totalDecisionVars, 1.0);
+void Ocp::createInitialGuess(
+    const std::vector<double>& initState,
+    const std::vector<double>& targetState)
+{
+    // Linearly interpolate states from initState to targetState across the horizon.
+    // Controls are initialised to zero — a neutral, feasible starting point for IPOPT.
+    // After the first successful solve, m_initialGuess is overwritten with the optimal
+    // solution (see solveOcp), so subsequent calls act as a warm start.
+    const int stride = m_numStates + m_numControls;
+    const int total  = stride * (m_numIntervals - 1) + m_numStates;
+    m_initialGuess.resize(total);
+
+    const double N = static_cast<double>(m_numIntervals - 1);
+    for (int k = 0; k < m_numIntervals - 1; ++k) {
+        const double t    = k / N;
+        const int    base = k * stride;
+        for (int s = 0; s < m_numStates; ++s) {
+            m_initialGuess[base + s] = initState[s] + t * (targetState[s] - initState[s]);
+        }
+        for (int c = 0; c < m_numControls; ++c) {
+            m_initialGuess[base + m_numStates + c] = 0.0;
+        }
+    }
+    // Terminal state: targetState
+    const int terminal = (m_numIntervals - 1) * stride;
+    for (int s = 0; s < m_numStates; ++s) {
+        m_initialGuess[terminal + s] = targetState[s];
+    }
 } // createInitialGuess
 
 int Ocp::solveOcp(const std::vector<double>& initState, const std::vector<double>& targetState) {
@@ -282,7 +325,7 @@ void Ocp::extractSolution() {
     m_thetaTraj.clear();
     m_vTraj.clear();
     m_omegaTraj.clear();
-    for (size_t idx{0UL}; idx < m_optx.size(); idx+=(m_numStates+m_numControls)) {
+    for (size_t idx{0UL}; idx < m_optx.size() - (m_numStates + m_numControls); idx+=(m_numStates+m_numControls)) {
         m_xTraj.push_back(m_optx[idx]);
         m_yTraj.push_back(m_optx[idx+1]);
         m_thetaTraj.push_back(m_optx[idx+2]);

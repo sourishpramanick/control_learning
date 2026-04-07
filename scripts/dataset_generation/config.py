@@ -30,8 +30,8 @@ OBSTACLES: list[dict] = [
 ]
 SAFETY_MARGIN: float = 0.5          # must match obstacles.json → safety_margin
 
-# ── OCP parameters (must match Optimizer::Optimize in Optimizer.cpp) ──────────
-N_INTERVALS: int = 50               # number of discretisation intervals
+# ── OCP parameters (must match Optimizer::OCP_INTERVAL in Optimizer.hpp) ────────
+N_INTERVALS: int = 100              # number of discretisation intervals — must equal Optimizer::OCP_INTERVAL
 SIM_STEP: float = 0.2               # seconds per step
 
 # ── Sampling constraints ───────────────────────────────────────────────────────
@@ -40,10 +40,10 @@ SIM_STEP: float = 0.2               # seconds per step
 MIN_START_TARGET_DISTANCE: float = 5.0   # metres
 
 # ── Generation settings ────────────────────────────────────────────────────────
-NUM_SAMPLES: int = 10_000
+NUM_SAMPLES: int = 100
 RANDOM_SEED: int = 42
 OUTPUT_PATH: str = os.path.join(_PROJECT_ROOT, "data", "dataset.npz")
-NUM_WORKERS: int = 4
+NUM_WORKERS: int = os.cpu_count() - 1  # Leave one core free to keep the system responsive. Adjust if you know what you're doing.
 SOLVER_TIMEOUT_S: float = 10.0      # per-solve wall-clock budget (seconds)
 # Maximum number of solver attempts before giving up (guards against bad seeds).
 MAX_ATTEMPTS_MULTIPLIER: int = 5    # attempts = NUM_SAMPLES * MAX_ATTEMPTS_MULTIPLIER
@@ -58,9 +58,9 @@ N_OBSTACLES: int = len(OBSTACLES)
 #   [safety_margin]           scalar              (1)
 INPUT_SIZE: int = 3 + 3 + 3 * N_OBSTACLES + 1   # = 22
 
-# Output vector layout  →  total OUTPUT_SIZE = 248
-#   [v0, ω0, v1, ω1, …, v48, ω48]          controls (interleaved)  (98)
-#   [x0, y0, θ0, x1, y1, θ1, …, x49, y49, θ49]  states (interleaved)  (150)
-N_CONTROLS_PER_TRAJ: int = N_INTERVALS - 1   # 49
-N_STATES_PER_TRAJ:   int = N_INTERVALS       # 50  (t=0 … t=49)
-OUTPUT_SIZE: int = 2 * N_CONTROLS_PER_TRAJ + 3 * N_STATES_PER_TRAJ  # = 248
+# Output vector layout  →  total OUTPUT_SIZE = 2*(N_INTERVALS-1) + 3*N_INTERVALS
+#   [v0, ω0, v1, ω1, …, v{N-2}, ω{N-2}]               controls (interleaved)  (2*(N_INTERVALS-1))
+#   [x0, y0, θ0, x1, y1, θ1, …, x{N-1}, y{N-1}, θ{N-1}]  states (interleaved)  (3*N_INTERVALS)
+N_CONTROLS_PER_TRAJ: int = N_INTERVALS - 1
+N_STATES_PER_TRAJ:   int = N_INTERVALS       # t=0 … t=N-1
+OUTPUT_SIZE: int = 2 * N_CONTROLS_PER_TRAJ + 3 * N_STATES_PER_TRAJ

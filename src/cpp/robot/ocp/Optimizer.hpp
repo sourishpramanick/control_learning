@@ -35,14 +35,18 @@ public:
     static int Optimize(
         const std::vector<double>& initState,
         const std::vector<double>& target,
-        const std::string& outputPath);
+        const std::string& outputPath,
+        int ocp_horizon = Optimizer::OCP_INTERVAL);
 
     static void OptimizeCodeGen(); /**< Solve the OCP problem using generated code from solver. */
     static void MPC(); /**< Run MPC loop using the OCP solver. */
+    static int getOcpInterval() { return OCP_INTERVAL; } /**< Get the number of intervals used in the OCP discretization. */
 
 private:
     static constexpr int MAX_MPC_ITERATIONS = 200; /**< Maximum number of iterations for the MPC loop. */
+    static constexpr int OCP_INTERVAL = 100; /**< Number of intervals for the OCP discretization. */
+    static constexpr int MPC_INTERVAL = 20; /**< Number of intervals for the MPC discretization. */
 }; // Optimizer
-} // Ocp
+} // namespace Ocp
 
 #endif // OPTIMIZER_HPP

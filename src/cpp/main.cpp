@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
     std::string outputPath{"ocp_solution.json"};
     bool hasInit{false};
     bool hasTarget{false};
+    int horizon{Ocp::Optimizer::getOcpInterval()};
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg{argv[i]};
@@ -47,6 +48,9 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--output" && i + 1 < argc) {
             outputPath = argv[i + 1];
             ++i;
+        } else if (arg == "--horizon" && i + 1 < argc) {
+            horizon = std::stoi(argv[i + 1]);
+            ++i;
         } else if (arg == "--mpc") {
             Ocp::Optimizer::MPC();
             return 0;
@@ -56,7 +60,7 @@ int main(int argc, char* argv[]) {
     if (hasInit && hasTarget) {
         // Dataset-generation mode: init/target supplied via CLI
         // Propagate solver exit code so the Python generator can detect failures.
-        return Ocp::Optimizer::Optimize(initState, target, outputPath);
+        return Ocp::Optimizer::Optimize(initState, target, outputPath, horizon);
     } else {
         // Interactive mode: load init/target from environment JSON files
         Ocp::Optimizer::Optimize();

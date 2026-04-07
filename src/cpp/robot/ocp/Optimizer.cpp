@@ -12,8 +12,9 @@ namespace Ocp {
 int Optimizer::Optimize(
     const std::vector<double>& initState,
     const std::vector<double>& target,
-    const std::string& outputPath)
-{
+    const std::string& outputPath,
+    int ocp_horizon
+) {
     // load floor space
     utilities::json floorJson = utilities::loadJson("src/cpp/robot/environment/space.json");
     std::vector<std::vector<double>> floorSpace{};
@@ -54,9 +55,9 @@ int Optimizer::Optimize(
     // Create model and OCP
     // 5.0 s CPU limit — no real-time constraint for single-shot dataset solving.
     robot::Model bot{};
-    Ocp ocp(50, std::move(bot), safetyMargin, 0.2, 5.0);
+    Ocp ocp(ocp_horizon, std::move(bot), safetyMargin, 0.2, 10.0);
     ocp.setupOcp(std::move(floorSpace), std::move(obstacles));
-    ocp.createInitialGuess();
+    ocp.createInitialGuess(initState, target);
     int ret = ocp.solveOcp(initState, target);
     ocp.extractSolution();
     ocp.saveTrajectoriesToJson(outputPath);
@@ -134,7 +135,7 @@ void Optimizer::MPC() {
     utilities::json obstacleJson = utilities::loadJson("src/cpp/robot/environment/obstacles.json");
     double safetyMargin = obstacleJson.value("safety_margin", 0.0);
     std::vector<std::vector<double>> obstacles;
-    obstacles.reserve(obstacleJson.size() - 1); // Reserve space (excluding safety_margin
+    obstacles.reserve(obstacleJson.size() - 1); // Reserve space (excluding safety_margin)
     for (const auto& [key, value] : obstacleJson.items()) {
         if (key == "safety_margin") {
             continue; // Skip non-obstacle entries
@@ -152,9 +153,9 @@ void Optimizer::MPC() {
     // Create model and OCP
     // 0.2 s CPU limit enforces the real-time deadline for MPC.
     robot::Model bot{};
-    Ocp ocp(20, std::move(bot), safetyMargin, 0.2, 0.2);
-    ocp.setupOcp(std::move(floorSpace),std::move(obstacles));
-    ocp.createInitialGuess();
+    Ocp ocp(Optimizer::MPC_INTERVAL, std::move(bot), safetyMargin, 0.2, 0.2);
+    ocp.setupOcp(std::move(floorSpace), std::move(obstacles));
+    ocp.createInitialGuess(initState, target);
 
     // create json file with empty arrays or clear existing file
     {
