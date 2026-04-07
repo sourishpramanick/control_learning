@@ -107,19 +107,21 @@ class DatasetVisualizer:
         
         safety_margin = float(input_vec[21])
         
-        # Parse output (248 values)
-        # First 98 values: interleaved controls (v0, ω0, v1, ω1, ..., v48, ω48)
-        # Next 150 values: interleaved states (x0, y0, θ0, x1, y1, θ1, ..., x49, y49, θ49)
+        # Parse output - dynamically sized based on n_intervals
+        # For n_intervals = N:
+        #   - Controls: N-1 pairs (v, ω) → 2*(N-1) values
+        #   - States: N triplets (x, y, θ) → 3*N values
+        # Total output size: 2*(N-1) + 3*N
         
-        n_controls = 49  # v0...v48
-        n_states = 50    # x0...x49
+        n_controls = self.n_intervals - 1
+        n_states = self.n_intervals
         
         # Extract controls (interleaved: v, ω, v, ω, ...)
         v = output_vec[0:2*n_controls:2]       # Every even index
         omega = output_vec[1:2*n_controls:2]   # Every odd index
         
         # Extract states (interleaved: x, y, θ, x, y, θ, ...)
-        state_start = 2 * n_controls  # 98
+        state_start = 2 * n_controls
         x = output_vec[state_start + 0::3]
         y = output_vec[state_start + 1::3]
         theta = output_vec[state_start + 2::3]
@@ -347,6 +349,156 @@ class DatasetVisualizer:
             plt.show()
         else:
             plt.close(fig)
+    
+    def animate_robot(self, idx: int, save_path: str = None, fps: int = 10, show: bool = True):
+        """Create animated visualization of robot moving along trajectory
+        
+        Args:
+            idx: Sample index
+            save_path: Path to save GIF (optional)
+            fps: Frames per second for animation
+            show: If True, display animation window. If False, only save.
+        
+        Returns:
+            Animation object
+        """
+        data = self.parse_sample(idx)
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+        fig.suptitle(f'Robot Trajectory Animation - Sample #{idx}', 
+                    fontsize=16, fontweight='bold')
+        
+        # Left plot: XY trajectory with robot
+        # Plot obstacles
+        for obs in data["obstacles"]:
+            circle = Circle((obs['x'], obs['y']), obs['r'], 
+                          color='red', alpha=0.3, zorder=1, label='Obstacle')
+            ax1.add_patch(circle)
+            ax1.plot(obs['x'], obs['y'], 'rx', markersize=8, markeredgewidth=2)
+        
+        ax1.plot(data["states"]["x"], data["states"]["y"], 
+                'b--', linewidth=1, alpha=0.5, label='Path', zorder=2)
+        
+        init = data["initial"]
+        tgt = data["target"]
+        ax1.plot(init["x"], init["y"], 'go', markersize=12, label='Start', zorder=4)
+        ax1.plot(tgt["x"], tgt["y"], 'r*', markersize=15, label='Goal', zorder=4)
+        
+        ax1.set_xlabel('X (m)', fontsize=12)
+        ax1.set_ylabel('Y (m)', fontsize=12)
+        ax1.set_title('Robot Path', fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        
+        # Remove duplicate labels for obstacles
+        handles, labels = ax1.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax1.legend(by_label.values(), by_label.keys(), loc='best')
+        ax1.axis('equal')
+        
+        # Robot representation (circle + arrow for heading)
+        robot_size = 0.2
+        robot_circle = Circle((data["states"]["x"][0], data["states"]["y"][0]), 
+                             robot_size, color='blue', alpha=0.6, zorder=5)
+        ax1.add_patch(robot_circle)
+        
+        # Heading arrow (will be created in animate)
+        arrow_length = 0.3
+        heading_arrow = [None]
+        
+        # Trajectory trace
+        trace_line, = ax1.plot([], [], 'b-', linewidth=2, label='Traveled')
+        
+        # Time text
+        time_text = ax1.text(0.02, 0.98, '', transform=ax1.transAxes,
+                           fontsize=12, verticalalignment='top',
+                           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        # Right plot: Controls over time
+        ax2.set_xlabel('Time (s)', fontsize=12)
+        ax2.set_ylabel('Control Input', fontsize=12)
+        ax2.set_title('Control Inputs', fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        
+        # Plot full control trajectories
+        ax2.plot(data["control_time"], data["controls"]["v"], 
+                'g--', linewidth=1, alpha=0.5, label='v (m/s)')
+        ax2_twin = ax2.twinx()
+        ax2_twin.plot(data["control_time"], np.rad2deg(data["controls"]["omega"]), 
+                     'r--', linewidth=1, alpha=0.5, label='ω (deg/s)')
+        
+        ax2.set_ylabel('v (m/s)', color='g', fontsize=12)
+        ax2_twin.set_ylabel('ω (deg/s)', color='r', fontsize=12)
+        
+        # Current control markers
+        v_point, = ax2.plot([], [], 'go', markersize=10, label='Current v')
+        omega_point, = ax2_twin.plot([], [], 'ro', markersize=10, label='Current ω')
+        
+        # Legends
+        lines1, labels1 = ax2.get_legend_handles_labels()
+        lines2, labels2 = ax2_twin.get_legend_handles_labels()
+        ax2.legend(lines1 + lines2, labels1 + labels2, loc='best')
+        
+        def init():
+            """Initialize animation"""
+            trace_line.set_data([], [])
+            time_text.set_text('')
+            v_point.set_data([], [])
+            omega_point.set_data([], [])
+            return trace_line, robot_circle, time_text, v_point, omega_point
+        
+        def animate(frame):
+            """Update animation for each frame"""
+            # Update robot position
+            robot_circle.center = (data["states"]["x"][frame], data["states"]["y"][frame])
+            
+            # Remove old arrow if it exists
+            if heading_arrow[0] is not None:
+                heading_arrow[0].remove()
+            
+            # Create new heading arrow
+            heading_arrow[0] = FancyArrow(
+                data["states"]["x"][frame], data["states"]["y"][frame],
+                arrow_length * np.cos(data["states"]["theta"][frame]),
+                arrow_length * np.sin(data["states"]["theta"][frame]),
+                width=0.1, head_width=0.2, head_length=0.15,
+                color='red', zorder=6
+            )
+            ax1.add_patch(heading_arrow[0])
+            
+            # Update trajectory trace
+            trace_line.set_data(data["states"]["x"][:frame+1], 
+                               data["states"]["y"][:frame+1])
+            
+            # Update time text
+            time_text.set_text(f'Time: {data["time"][frame]:.2f} s')
+            
+            # Update control points (if within control array bounds)
+            if frame < len(data["controls"]["v"]):
+                v_point.set_data([data["control_time"][frame]], 
+                                [data["controls"]["v"][frame]])
+                omega_point.set_data([data["control_time"][frame]], 
+                                    [np.rad2deg(data["controls"]["omega"][frame])])
+            
+            return trace_line, robot_circle, heading_arrow[0], time_text, v_point, omega_point
+        
+        # Create animation
+        anim = FuncAnimation(
+            fig, animate, init_func=init,
+            frames=len(data["states"]["x"]), interval=1000/fps, blit=False, repeat=True
+        )
+        
+        if save_path:
+            print(f"Saving animation to {save_path}... (this may take a minute)")
+            writer = PillowWriter(fps=fps)
+            anim.save(save_path, writer=writer)
+            print(f"Animation saved to: {save_path}")
+        
+        if show:
+            plt.show()
+        else:
+            plt.close(fig)
+        
+        return anim
 
 
 def main():
@@ -357,8 +509,10 @@ def main():
 Examples:
   %(prog)s                                    # View random sample
   %(prog)s --index 42                         # View sample #42
+  %(prog)s --index 42 --animate               # Animate sample #42
   %(prog)s --num-runs 9                       # View 9 random samples
   %(prog)s --index 10 --save plots/run10.png  # Save specific run
+  %(prog)s --index 10 --save-anim run10.gif   # Save animation as GIF
   %(prog)s --overview --num-runs 12           # Grid overview of 12 samples
         """
     )
@@ -371,10 +525,16 @@ Examples:
                        help='Number of random samples to visualize (default: 1)')
     parser.add_argument('--overview', action='store_true',
                        help='Show grid overview of multiple samples')
+    parser.add_argument('--animate', action='store_true',
+                       help='Show animated visualization')
     parser.add_argument('--save', type=str,
                        help='Path to save the plot (for single trajectory)')
+    parser.add_argument('--save-anim', type=str,
+                       help='Path to save animation as GIF')
     parser.add_argument('--save-dir', type=str,
                        help='Directory to save plots (for multiple trajectories)')
+    parser.add_argument('--fps', type=int, default=10,
+                       help='Animation frames per second (default: 10)')
     parser.add_argument('--no-display', action='store_true',
                        help='Do not display plots, only save them')
     parser.add_argument('--seed', type=int,
@@ -398,21 +558,40 @@ Examples:
                          show=show_plots)
     elif args.index is not None:
         # Show specific index
-        viz.plot_trajectory(args.index, save_path=args.save, show=show_plots)
+        if args.animate or args.save_anim:
+            # Show animation
+            viz.animate_robot(args.index, save_path=args.save_anim, 
+                            fps=args.fps, show=show_plots)
+        else:
+            # Show static plot
+            viz.plot_trajectory(args.index, save_path=args.save, show=show_plots)
     elif args.num_runs > 1:
         # Show multiple random samples
         indices = np.random.choice(viz.n_samples, size=args.num_runs, replace=False)
         for idx in indices:
-            save_path = None
-            if args.save_dir:
-                save_path = Path(args.save_dir) / f"sample_{idx:05d}.png"
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-            viz.plot_trajectory(idx, save_path=save_path, show=show_plots)
+            if args.animate or args.save_anim:
+                # Animation mode
+                save_path = None
+                if args.save_dir:
+                    save_path = Path(args.save_dir) / f"sample_{idx:05d}.gif"
+                    save_path.parent.mkdir(parents=True, exist_ok=True)
+                viz.animate_robot(idx, save_path=save_path, fps=args.fps, show=show_plots)
+            else:
+                # Static plot mode
+                save_path = None
+                if args.save_dir:
+                    save_path = Path(args.save_dir) / f"sample_{idx:05d}.png"
+                    save_path.parent.mkdir(parents=True, exist_ok=True)
+                viz.plot_trajectory(idx, save_path=save_path, show=show_plots)
     else:
         # Show one random sample
         idx = np.random.randint(0, viz.n_samples)
         print(f"Showing random sample #{idx}")
-        viz.plot_trajectory(idx, save_path=args.save, show=show_plots)
+        if args.animate or args.save_anim:
+            viz.animate_robot(idx, save_path=args.save_anim, 
+                            fps=args.fps, show=show_plots)
+        else:
+            viz.plot_trajectory(idx, save_path=args.save, show=show_plots)
 
 
 if __name__ == '__main__':

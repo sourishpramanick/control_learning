@@ -78,13 +78,37 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
     occupied = _in_obstacle(xg, yg)
     free_fraction = 1.0 - occupied.mean()
 
+    # ── Load dataset and derive observed solve rate ──
+    X = Y = None
+    observed: float
+    if dataset_path and os.path.isfile(dataset_path):
+        d = np.load(dataset_path)
+        X = d["inputs"]   # (N, INPUT_SIZE)
+        Y = d["outputs"]  # (N, OUTPUT_SIZE)
+        d.close()
+        # Read the observed solve rate from the sidecar metadata JSON.
+        import json
+        meta_path = dataset_path.replace(".npz", "_meta.json")
+        if os.path.isfile(meta_path):
+            with open(meta_path) as _fh:
+                _meta = json.load(_fh)
+            observed = float(_meta["success_rate"])
+            print(f"Dataset : {dataset_path}  ({len(X):,} samples)")
+            print(f"Metadata: {meta_path}  →  observed solve rate = {observed:.1%}")
+        else:
+            print(f"Warning: {meta_path} not found — estimating solve rate from sample count.")
+            observed = 1.0 / cfg.MAX_ATTEMPTS_MULTIPLIER
+    else:
+        # No dataset provided — fall back to the historical reference value.
+        observed = 0.596
+        print("No dataset provided — using reference solve rate of 59.6%")
+
     # ── Expected rates ──
     # The generator guarantees both points are already in free space.
     # So n_attempted = (both-free pairs), and success = those that also pass
     # the distance filter AND IPOPT converges.
-    p_dist   = p_distance_given_free(cfg.MIN_START_TARGET_DISTANCE)
-    observed = 0.596   # from the completed 10 000-sample run
-    p_ipopt  = observed / p_dist if p_dist > 0 else 0.0
+    p_dist  = p_distance_given_free(cfg.MIN_START_TARGET_DISTANCE)
+    p_ipopt = observed / p_dist if p_dist > 0 else 0.0
 
     print(f"Free-space fraction p                         : {free_fraction:.3f}  ({free_fraction*100:.1f}%)")
     print(f"P(dist>={cfg.MIN_START_TARGET_DISTANCE:.0f}m | both in free space)           : {p_dist:.3f}  ({p_dist*100:.1f}%)")
@@ -100,14 +124,6 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
     print(f"  1. The minimum start–target distance ({cfg.MIN_START_TARGET_DISTANCE} m) rejecting ~{(1-p_dist)*100:.0f}% of pairs.")
     print(f"  2. IPOPT failing to find a feasible path for ~{(p_dist-observed)*100:.0f}% of geometrically")
     print("     valid pairs (start and target in free space, far enough apart, but")
-
-    # ── Load dataset if provided ──
-    X = Y = None
-    if dataset_path and os.path.isfile(dataset_path):
-        d = np.load(dataset_path)
-        X = d["inputs"]   # (N, 22)
-        Y = d["outputs"]  # (N, 248)
-
     print("     path blocked by obstacles in between).")
 
     fig = plt.figure(figsize=(18, 10))
@@ -253,7 +269,7 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Analyse dataset solve rate.")
-    p.add_argument("--dataset", type=str, default="data/dataset.npz",
+    p.add_argument("--dataset", type=str, default="data/dataset1.npz",
                    help="Path to dataset.npz (optional; enables scatter plots)")
     p.add_argument("--output",  type=str, default="data/solve_rate_analysis.png",
                    help="Path to save the figure")
