@@ -138,13 +138,14 @@ class DatasetVisualizer:
             "control_time": np.arange(len(v)) * self.sim_step,
         }
     
-    def plot_trajectory(self, idx: int, save_path: str = None, show: bool = True):
+    def plot_trajectory(self, idx: int, save_path: str = None, show: bool = True, block: bool = True):
         """Plot a single trajectory
         
         Args:
             idx: Sample index
             save_path: Optional path to save the plot
             show: Whether to display the plot
+            block: Whether to block execution until window is closed (only used if show=True)
         """
         data = self.parse_sample(idx)
         
@@ -269,7 +270,7 @@ class DatasetVisualizer:
             print(f"Saved plot to: {save_path}")
         
         if show:
-            plt.show()
+            plt.show(block=block)
         else:
             plt.close(fig)
     
@@ -517,8 +518,8 @@ Examples:
         """
     )
     
-    parser.add_argument('--dataset', type=str, default='data/dataset.npz',
-                       help='Path to dataset.npz file (default: data/dataset.npz)')
+    parser.add_argument('--dataset', type=str, default='data/dataset2.npz',
+                       help='Path to dataset.npz file (default: data/dataset2.npz)')
     parser.add_argument('--index', type=int, 
                        help='Specific sample index to visualize')
     parser.add_argument('--num-runs', type=int, default=1,
@@ -559,25 +560,32 @@ Examples:
     elif args.index is not None:
         # Show specific index
         if args.animate or args.save_anim:
-            # Show animation
-            viz.animate_robot(args.index, save_path=args.save_anim, 
+            # Show both static plot (non-blocking) and animation (blocking)
+            viz.plot_trajectory(args.index, save_path=args.save, show=show_plots, block=False)
+            anim = viz.animate_robot(args.index, save_path=args.save_anim, 
                             fps=args.fps, show=show_plots)
         else:
-            # Show static plot
+            # Show static plot only (blocking)
             viz.plot_trajectory(args.index, save_path=args.save, show=show_plots)
     elif args.num_runs > 1:
         # Show multiple random samples
         indices = np.random.choice(viz.n_samples, size=args.num_runs, replace=False)
+        anims = []  # Keep animation references alive
         for idx in indices:
             if args.animate or args.save_anim:
-                # Animation mode
-                save_path = None
+                # Show both static and animation (static is non-blocking)
+                save_path_static = None
+                save_path_anim = None
                 if args.save_dir:
-                    save_path = Path(args.save_dir) / f"sample_{idx:05d}.gif"
-                    save_path.parent.mkdir(parents=True, exist_ok=True)
-                viz.animate_robot(idx, save_path=save_path, fps=args.fps, show=show_plots)
+                    save_path_static = Path(args.save_dir) / f"sample_{idx:05d}.png"
+                    save_path_anim = Path(args.save_dir) / f"sample_{idx:05d}.gif"
+                    save_path_static.parent.mkdir(parents=True, exist_ok=True)
+                
+                viz.plot_trajectory(idx, save_path=save_path_static, show=show_plots, block=False)
+                anim = viz.animate_robot(idx, save_path=save_path_anim, fps=args.fps, show=show_plots)
+                anims.append(anim)  # Keep reference
             else:
-                # Static plot mode
+                # Static plot mode only
                 save_path = None
                 if args.save_dir:
                     save_path = Path(args.save_dir) / f"sample_{idx:05d}.png"
@@ -588,7 +596,9 @@ Examples:
         idx = np.random.randint(0, viz.n_samples)
         print(f"Showing random sample #{idx}")
         if args.animate or args.save_anim:
-            viz.animate_robot(idx, save_path=args.save_anim, 
+            # Show both static plot (non-blocking) and animation (blocking)
+            viz.plot_trajectory(idx, save_path=args.save, show=show_plots, block=False)
+            anim = viz.animate_robot(idx, save_path=args.save_anim, 
                             fps=args.fps, show=show_plots)
         else:
             viz.plot_trajectory(idx, save_path=args.save, show=show_plots)
