@@ -6,7 +6,7 @@
 
 #include "robot/ocp/Ocp.hpp"
 #include "robot/ocp/Optimizer.hpp"
-#include "nlp_solver_generated.h"
+// #include "nlp_solver_generated.h"
 
 /**
  * @brief Entry point.
