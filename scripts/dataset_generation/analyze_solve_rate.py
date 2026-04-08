@@ -1,5 +1,5 @@
 """
-Visualise why the dataset generator has a ~60 % solve rate.
+Visualise the dataset solve rate and the geometry that determines it.
 
 The rate is fully explained by the floor-space geometry:
   - Both start AND target must lie outside all enlarged obstacles
@@ -7,6 +7,9 @@ The rate is fully explained by the floor-space geometry:
   - The pair is also rejected when start–target distance < MIN_START_TARGET_DISTANCE.
   - Any remaining IPOPT failures (infeasible paths between two free-space points) add
     a small additional rejection fraction.
+
+The observed solve rate is read from the sidecar <dataset>_meta.json produced by
+the generator, so no values are hardcoded in this file.
 
 Usage (from project root, mpc_dl env):
     python scripts/dataset_generation/analyze_solve_rate.py [--dataset data/dataset.npz]
@@ -99,9 +102,11 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
             print(f"Warning: {meta_path} not found — estimating solve rate from sample count.")
             observed = 1.0 / cfg.MAX_ATTEMPTS_MULTIPLIER
     else:
-        # No dataset provided — fall back to the historical reference value.
-        observed = 0.596
-        print("No dataset provided — using reference solve rate of 59.6%")
+        # No dataset provided — fall back to 1/MAX_ATTEMPTS_MULTIPLIER as a
+        # rough lower-bound estimate (every attempt succeeds on average once).
+        observed = 1.0 / cfg.MAX_ATTEMPTS_MULTIPLIER
+        print(f"No dataset provided — using estimated solve rate of {observed:.1%} "
+              f"(1 / MAX_ATTEMPTS_MULTIPLIER = 1 / {cfg.MAX_ATTEMPTS_MULTIPLIER})")
 
     # ── Expected rates ──
     # The generator guarantees both points are already in free space.
@@ -120,7 +125,7 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
     print(f"  Distance filter rejects      : {(1-p_dist)*100:.1f}% of attempts")
     print(f"  IPOPT infeasible (path blocked): {(p_dist - observed)*100:.1f}% of attempts")
     print()
-    print("The ~60% rate is NOT anomalous. It is a direct consequence of:")
+    print(f"The {observed:.0%} rate is explained by:")
     print(f"  1. The minimum start–target distance ({cfg.MIN_START_TARGET_DISTANCE} m) rejecting ~{(1-p_dist)*100:.0f}% of pairs.")
     print(f"  2. IPOPT failing to find a feasible path for ~{(p_dist-observed)*100:.0f}% of geometrically")
     print("     valid pairs (start and target in free space, far enough apart, but")
@@ -192,7 +197,7 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
     ax2.set_ylim(0, 120)
     ax2.set_xlim(-0.5, 3.2)
     ax2.set_ylabel("Fraction of attempts (%)")
-    ax2.set_title("Why ~60% Solve Rate?\nConditional probability cascade")
+    ax2.set_title(f"Solve Rate: {observed:.1%}\nConditional probability cascade")
 
     # ── Panel 3: Obstacle area composition ──
     ax3 = fig.add_subplot(2, 3, 3)
@@ -256,7 +261,7 @@ def plot_analysis(dataset_path: str | None, save_path: str) -> None:
             color=["#e74c3c", "#e67e22", "#2ecc71"], edgecolor="black"
         )
         ax4.set_ylabel("% of all attempts")
-        ax4.set_title("Failure Decomposition\n(why ~40% of attempts are discarded)")
+        ax4.set_title(f"Failure Decomposition\n({(1-observed)*100:.1f}% of attempts discarded)")
         ax4.grid(axis="y", alpha=0.3)
 
     plt.tight_layout(rect=[0, 0, 1, 0.94])
