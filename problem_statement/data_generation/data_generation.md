@@ -34,7 +34,7 @@ single-shot trajectory optimisation problem for a unicycle robot:
 
 ## Dataset schema
 
-### Input vector — shape `(N, 22)`
+### Input vector — shape `(N, 27)`
 
 | Index range | Description |
 |---|---|
@@ -46,6 +46,16 @@ single-shot trajectory optimisation problem for a unicycle robot:
 | 15–17 | Obstacle 4 `(x, y, r)` |
 | 18–20 | Obstacle 5 `(x, y, r)` |
 | 21 | Safety margin (scalar) |
+| 22 | `wheel_base` (m) |
+| 23 | `max_velocity` (m/s) |
+| 24 | `min_velocity` (m/s) |
+| 25 | `max_angular_velocity` (rad/s) |
+| 26 | `min_angular_velocity` (rad/s) |
+
+Robot parameters (indices 22–26) are loaded at generation time from
+`src/cpp/robot/data/parameters.json` via `config.py`. They are constant
+across all rows in a single-robot dataset but included so the network is
+robot-aware and can generalise to different platforms without retraining.
 
 ### Output vector — shape `(N, 498)`
 
@@ -69,7 +79,7 @@ for each sample:
 1. **Sample** `(x₀, y₀)` and `(xT, yT)` uniformly from the floor, rejecting
    points inside any obstacle + safety margin.  Angles `θ₀`, `θT` are drawn
    uniformly from `(-π, π)`.  Pairs where the Euclidean distance between start
-   and target XY is below `MIN_START_TARGET_DISTANCE` (2 m) are rejected to
+   and target XY is below `MIN_START_TARGET_DISTANCE` (5 m) are rejected to
    avoid trivially easy problems.
 
 2. **Invoke the C++ binary** with CLI flags:
@@ -90,7 +100,7 @@ for each sample:
    - `controls['v'][:99]` and `controls['omega'][:99]` (99 control steps)
    - `states['x'][:100]`, `states['y'][:100]`, `states['theta'][:100]` (100 state nodes)
 
-5. **Assemble** the 22-D input and 498-D output vectors.
+5. **Assemble** the 27-D input and 498-D output vectors.
 
 6. **Save** accumulated arrays to a compressed NumPy `.npz` file plus a JSON
    sidecar with full metadata.
@@ -161,8 +171,8 @@ the environment JSON files and writes to `ocp_solution.json`.
 
 | File | Description |
 |---|---|
-| `data/dataset.npz` | Compressed NumPy archive with keys `inputs (N,22)` and `outputs (N,498)` |
-| `data/dataset_meta.json` | JSON metadata: column names, config snapshot, solve stats |
+| `data/<name>.npz` | Compressed NumPy archive with keys `inputs (N,27)` and `outputs (N,498)` |
+| `data/<name>_meta.json` | JSON metadata: column names, config snapshot, solve stats |
 
 ---
 
@@ -189,13 +199,13 @@ import numpy as np
 import json
 
 data = np.load("data/dataset.npz")
-X = data["inputs"]   # shape (N, 22)
+X = data["inputs"]   # shape (N, 27)
 Y = data["outputs"]  # shape (N, 498)
 
 with open("data/dataset_meta.json") as f:
     meta = json.load(f)
 
-input_cols  = meta["input_columns"]   # list of 22 names
+input_cols  = meta["input_columns"]   # list of 27 names
 output_cols = meta["output_columns"]  # list of 498 names
 ```
 

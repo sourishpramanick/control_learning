@@ -26,21 +26,27 @@ MIN_VELOCITY:         float = float(_params["min_velocity"])
 MAX_ANGULAR_VELOCITY: float = float(_params["max_angular_velocity"])
 MIN_ANGULAR_VELOCITY: float = float(_params["min_angular_velocity"])
 
-# ── Floor space (must match space.json) ───────────────────────────────────────
-FLOOR_X_MIN: float = 0.0
-FLOOR_X_MAX: float = 20.0
-FLOOR_Y_MIN: float = 0.0
-FLOOR_Y_MAX: float = 20.0
+# ── Floor space (loaded from space.json) ─────────────────────────────────────
+_SPACE_PATH: str = os.path.join(_PROJECT_ROOT, "src", "cpp", "robot", "environment", "space.json")
+with open(_SPACE_PATH) as _f:
+    _space = json.load(_f)
 
-# ── Fixed obstacles (must match obstacles.json) ───────────────────────────────
+FLOOR_X_MIN: float = float(_space["x"]["min"])
+FLOOR_X_MAX: float = float(_space["x"]["max"])
+FLOOR_Y_MIN: float = float(_space["y"]["min"])
+FLOOR_Y_MAX: float = float(_space["y"]["max"])
+
+# ── Fixed obstacles (loaded from obstacles.json) ──────────────────────────────
+_OBSTACLES_PATH: str = os.path.join(_PROJECT_ROOT, "src", "cpp", "robot", "environment", "obstacles.json")
+with open(_OBSTACLES_PATH) as _f:
+    _obs_json = json.load(_f)
+
+SAFETY_MARGIN: float = float(_obs_json["safety_margin"])
 OBSTACLES: list[dict] = [
-    {"x": 2.0,  "y": 2.0,  "r": 1.0},
-    {"x": 7.0,  "y": 6.0,  "r": 2.0},
-    {"x": 16.0, "y": 15.0, "r": 3.0},
-    {"x": 5.0,  "y": 15.0, "r": 2.0},
-    {"x": 15.0, "y": 7.5,  "r": 2.0},
+    {"x": float(v["x"]), "y": float(v["y"]), "r": float(v["r"])}
+    for k, v in _obs_json.items()
+    if k != "safety_margin"
 ]
-SAFETY_MARGIN: float = 0.5          # must match obstacles.json → safety_margin
 
 # ── OCP parameters (must match Optimizer::OCP_INTERVAL in Optimizer.hpp) ────────
 N_INTERVALS: int = 100              # number of discretisation intervals — must equal Optimizer::OCP_INTERVAL

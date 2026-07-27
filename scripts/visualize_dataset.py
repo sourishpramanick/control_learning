@@ -518,8 +518,8 @@ Examples:
         """
     )
     
-    parser.add_argument('--dataset', type=str, default='data/dataset2.npz',
-                       help='Path to dataset.npz file (default: data/dataset2.npz)')
+    parser.add_argument('--dataset', type=str, default='data/dataset.npz',
+                       help='Path to dataset.npz file (default: data/dataset.npz)')
     parser.add_argument('--index', type=int, 
                        help='Specific sample index to visualize')
     parser.add_argument('--num-runs', type=int, default=1,
