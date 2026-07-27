@@ -5,6 +5,7 @@ layout, OCP parameters, or generation settings — never hard-code values inside
 generator.py.
 """
 
+import json
 import os
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -13,6 +14,17 @@ _PROJECT_ROOT: str = os.path.dirname(os.path.dirname(_THIS_DIR))
 
 # Release binary is used (faster than Debug, no ASAN overhead).
 BINARY_PATH: str = os.path.join(_PROJECT_ROOT, "build", "Release", "control_learning")
+
+# ── Robot parameters (loaded from parameters.json) ────────────────────────────
+_PARAMS_PATH: str = os.path.join(_PROJECT_ROOT, "src", "cpp", "robot", "data", "parameters.json")
+with open(_PARAMS_PATH) as _f:
+    _params = json.load(_f)["parameters"]
+
+WHEEL_BASE:           float = float(_params["wheel_base"])
+MAX_VELOCITY:         float = float(_params["max_velocity"])
+MIN_VELOCITY:         float = float(_params["min_velocity"])
+MAX_ANGULAR_VELOCITY: float = float(_params["max_angular_velocity"])
+MIN_ANGULAR_VELOCITY: float = float(_params["min_angular_velocity"])
 
 # ── Floor space (must match space.json) ───────────────────────────────────────
 FLOOR_X_MIN: float = 0.0
@@ -50,13 +62,22 @@ MAX_ATTEMPTS_MULTIPLIER: int = 5    # attempts = NUM_SAMPLES * MAX_ATTEMPTS_MULT
 
 # ── Derived sizes (do not edit) ────────────────────────────────────────────────
 N_OBSTACLES: int = len(OBSTACLES)
+_ROBOT_PARAM_KEYS: tuple[str, ...] = (
+    "wheel_base", "max_velocity", "min_velocity",
+    "max_angular_velocity", "min_angular_velocity",
+)
+N_ROBOT_PARAMS: int = len(_ROBOT_PARAM_KEYS)
+assert all(k in _params for k in _ROBOT_PARAM_KEYS), (
+    f"parameters.json is missing one of {_ROBOT_PARAM_KEYS}"
+)
 
-# Input vector layout  →  total INPUT_SIZE = 22
+# Input vector layout  →  total INPUT_SIZE = 27
 #   [x0, y0, θ0]              initial state       (3)
 #   [xT, yT, θT]              target  state       (3)
 #   [ox_k, oy_k, or_k] × 5   obstacle positions  (15)
 #   [safety_margin]           scalar              (1)
-INPUT_SIZE: int = 3 + 3 + 3 * N_OBSTACLES + 1   # = 22
+#   [wheel_base, max_v, min_v, max_ω, min_ω]     robot params (5)
+INPUT_SIZE: int = 3 + 3 + 3 * N_OBSTACLES + 1 + N_ROBOT_PARAMS   # = 27
 
 # Output vector layout  →  total OUTPUT_SIZE = 2*(N_INTERVALS-1) + 3*N_INTERVALS
 #   [v0, ω0, v1, ω1, …, v{N-2}, ω{N-2}]               controls (interleaved)  (2*(N_INTERVALS-1))

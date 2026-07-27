@@ -48,7 +48,7 @@ class DatasetVisualizer:
         
         # Load dataset
         data = np.load(self.npz_path)
-        self.inputs = data['inputs']   # Shape: (N, 22)
+        self.inputs = data['inputs']   # Shape: (N, INPUT_SIZE)
         self.outputs = data['outputs']  # Shape: (N, 248)
         data.close()
         
@@ -91,7 +91,7 @@ class DatasetVisualizer:
         input_vec = self.inputs[idx]
         output_vec = self.outputs[idx]
         
-        # Parse input (22 values)
+        # Parse input (first 22 values; indices 22+ are robot params appended at the end)
         x0, y0, theta0 = input_vec[0:3]
         xT, yT, thetaT = input_vec[3:6]
         

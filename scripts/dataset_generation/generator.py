@@ -9,10 +9,11 @@ For each sample the generator:
   5. Accumulates (input_vec, output_vec) rows and saves to a compressed .npz
      file together with a sidecar metadata JSON.
 
-Input vector  (22,):
+Input vector  (27,):
     [x0, y0, θ0, xT, yT, θT,
      obs1_x, obs1_y, obs1_r, …, obs5_x, obs5_y, obs5_r,
-     safety_margin]
+     safety_margin,
+     wheel_base, max_velocity, min_velocity, max_angular_velocity, min_angular_velocity]
 
 Output vector (cfg.OUTPUT_SIZE,):  where N = cfg.N_INTERVALS (set in config.py)
     [v0, ω0, v1, ω1, …, v{N-2}, ω{N-2}]               ← 2*(N-1) control values
@@ -56,6 +57,8 @@ def input_column_names() -> list[str]:
     for k in range(cfg.N_OBSTACLES):
         names += [f"obs{k + 1}_x", f"obs{k + 1}_y", f"obs{k + 1}_r"]
     names.append("safety_margin")
+    names += ["wheel_base", "max_velocity", "min_velocity",
+              "max_angular_velocity", "min_angular_velocity"]
     return names   # length == cfg.INPUT_SIZE
 
 
@@ -156,10 +159,17 @@ def _solve_one(seed: int) -> Optional[tuple[np.ndarray, np.ndarray]]:
         ys    = np.asarray(y_raw[:cfg.N_STATES_PER_TRAJ],       dtype=np.float32)
         ts    = np.asarray(theta_raw[:cfg.N_STATES_PER_TRAJ],   dtype=np.float32)
 
-        # ── Assemble input vector (22,) ──
+        # ── Assemble input vector (27,) ──
         obs_flat = [val for obs in cfg.OBSTACLES for val in (obs["x"], obs["y"], obs["r"])]
+        robot_params = [
+            cfg.WHEEL_BASE,
+            cfg.MAX_VELOCITY,
+            cfg.MIN_VELOCITY,
+            cfg.MAX_ANGULAR_VELOCITY,
+            cfg.MIN_ANGULAR_VELOCITY,
+        ]
         input_vec = np.asarray(
-            [x0, y0, theta0, xT, yT, thetaT] + obs_flat + [cfg.SAFETY_MARGIN],
+            [x0, y0, theta0, xT, yT, thetaT] + obs_flat + [cfg.SAFETY_MARGIN] + robot_params,
             dtype=np.float32,
         )
 
