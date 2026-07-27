@@ -48,9 +48,13 @@ OBSTACLES: list[dict] = [
     if k != "safety_margin"
 ]
 
-# ── OCP parameters (must match Optimizer::OCP_INTERVAL in Optimizer.hpp) ────────
-N_INTERVALS: int = 100              # number of discretisation intervals — must equal Optimizer::OCP_INTERVAL
-SIM_STEP: float = 0.2               # seconds per step
+# ── OCP parameters (loaded from ocp_parameters.json) ─────────────────────────────
+_OCP_PARAMS_PATH: str = os.path.join(_PROJECT_ROOT, "src", "cpp", "robot", "ocp", "ocp_parameters.json")
+with open(_OCP_PARAMS_PATH) as _f:
+    _ocp_params = json.load(_f)
+
+N_INTERVALS: int = int(_ocp_params["n_intervals"])
+SIM_STEP: float = float(_ocp_params["sim_step"])
 
 # ── Sampling constraints ───────────────────────────────────────────────────────
 # Minimum Euclidean distance between sampled start and target XY positions.

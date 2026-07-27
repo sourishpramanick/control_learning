@@ -52,10 +52,12 @@ int Optimizer::Optimize(
     std::cout << "Init state: " << initState << std::endl;
     std::cout << "Target:     " << target << std::endl;
 
+    // Load OCP parameters
+    utilities::json ocpParams = utilities::loadJson("src/cpp/robot/ocp/ocp_parameters.json");
+
     // Create model and OCP
-    // 5.0 s CPU limit — no real-time constraint for single-shot dataset solving.
     robot::Model bot{};
-    Ocp ocp(ocp_horizon, std::move(bot), safetyMargin, 0.2, 10.0);
+    Ocp ocp(ocp_horizon, std::move(bot), safetyMargin, ocpParams["max_cpu_time_dataset"].get<double>());
     ocp.setupOcp(std::move(floorSpace), std::move(obstacles));
     ocp.createInitialGuess(initState, target);
     int ret = ocp.solveOcp(initState, target);
@@ -84,7 +86,7 @@ void Optimizer::Optimize() {
     };
     std::cout << "Loaded target from JSON: " << target << std::endl;
 
-    Optimize(initState, target, "ocp_solution.json");
+    Optimize(initState, target, "ocp_solution.json", getOcpInterval());
 
 } // Optimize
 
@@ -150,10 +152,14 @@ void Optimizer::MPC() {
     std::cout << "Obstacles: " << obstacles << std::endl;
     std::cout << "Safety margin: " << safetyMargin << " m" << std::endl;
 
-    // Create model and OCP
-    // 0.2 s CPU limit enforces the real-time deadline for MPC.
+    // Load OCP parameters
+    utilities::json ocpParams = utilities::loadJson("src/cpp/robot/ocp/ocp_parameters.json");
+    const int mpcIntervals = ocpParams["mpc_intervals"].get<int>();
+    const int maxMpcIter   = ocpParams["max_mpc_iterations"].get<int>();
+
+    // Create model and OCP (max_cpu_time_mpc enforces the real-time deadline)
     robot::Model bot{};
-    Ocp ocp(Optimizer::MPC_INTERVAL, std::move(bot), safetyMargin, 0.2, 0.2);
+    Ocp ocp(mpcIntervals, std::move(bot), safetyMargin, ocpParams["max_cpu_time_mpc"].get<double>());
     ocp.setupOcp(std::move(floorSpace), std::move(obstacles));
     ocp.createInitialGuess(initState, target);
 
@@ -176,7 +182,7 @@ void Optimizer::MPC() {
     }
 
     int iter = 0;
-    while (!isClose(initState, target) && iter < Optimizer::MAX_MPC_ITERATIONS) {
+    while (!isClose(initState, target) && iter < maxMpcIter) {
         if(ocp.solveOcp(initState, target)) {
             std::cerr << "MPC OCP solve failed, stopping MPC loop." << std::endl;
             ocp.extractSolution();

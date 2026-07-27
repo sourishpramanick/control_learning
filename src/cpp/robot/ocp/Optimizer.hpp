@@ -36,16 +36,19 @@ public:
         const std::vector<double>& initState,
         const std::vector<double>& target,
         const std::string& outputPath,
-        int ocp_horizon = Optimizer::OCP_INTERVAL);
+        int ocp_horizon);
 
     static void OptimizeCodeGen(); /**< Solve the OCP problem using generated code from solver. */
     static void MPC(); /**< Run MPC loop using the OCP solver. */
-    static int getOcpInterval() { return OCP_INTERVAL; } /**< Get the number of intervals used in the OCP discretization. */
+
+    /** Read n_intervals from ocp_parameters.json. Result is cached after first call. */
+    static int getOcpInterval() {
+        static const int val = utilities::loadJson("src/cpp/robot/ocp/ocp_parameters.json")
+                                   ["n_intervals"].get<int>();
+        return val;
+    }
 
 private:
-    static constexpr int MAX_MPC_ITERATIONS = 200; /**< Maximum number of iterations for the MPC loop. */
-    static constexpr int OCP_INTERVAL = 100; /**< Number of intervals for the OCP discretization. */
-    static constexpr int MPC_INTERVAL = 20; /**< Number of intervals for the MPC discretization. */
 }; // Optimizer
 } // namespace Ocp
 

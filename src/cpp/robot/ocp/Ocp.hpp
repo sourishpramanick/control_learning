@@ -32,12 +32,11 @@ public:
      * @param N Number of intervals in the discretization.
      * @param bot Robot dynamics model.
      * @param safetyMargin Safety margin around obstacles (metres).
-     * @param simStep Simulation step size (seconds).
      * @param maxCpuTime IPOPT CPU time limit per solve (seconds).
-     *        Use a large value (e.g. 5.0) for offline/dataset solving;
+     *        Use a large value (e.g. 10.0) for offline/dataset solving;
      *        set to 0.2 for real-time MPC.
      */
-    Ocp(int N, robot::Model&& bot, double safetyMargin = 0.0, double simStep = 0.1, double maxCpuTime = 5.0);
+    Ocp(int N, robot::Model&& bot, double safetyMargin = 0.0, double maxCpuTime = 5.0);
     ~Ocp() = default; /**< Default destructor. */
 
     // methods

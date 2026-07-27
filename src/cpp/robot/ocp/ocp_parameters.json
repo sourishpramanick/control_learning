@@ -1,0 +1,8 @@
+{
+    "n_intervals": 100,
+    "mpc_intervals": 20,
+    "max_mpc_iterations": 200,
+    "sim_step": 0.2,
+    "max_cpu_time_dataset": 10.0,
+    "max_cpu_time_mpc": 0.2
+}

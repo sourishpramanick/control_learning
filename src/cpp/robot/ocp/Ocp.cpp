@@ -12,16 +12,15 @@
 
 namespace Ocp {
 
-Ocp::Ocp(int N, robot::Model&& bot, double safetyMargin, double simStep, double maxCpuTime)
-    : m_numIntervals(N),
+Ocp::Ocp(int N, robot::Model&& bot, double safetyMargin, double maxCpuTime)
+    : m_obstacleSafetyMargin(safetyMargin),
+      m_maxCpuTime(maxCpuTime),
+      m_simStep(utilities::loadJson("src/cpp/robot/ocp/ocp_parameters.json")["sim_step"].get<double>()),
+      m_numIntervals(N),
       m_model(std::move(bot)),
       m_numStates(m_model.getStates().size1()),
-      m_numControls(m_model.getControls().size1()),
-      m_simStep(simStep),
-      m_obstacleSafetyMargin(safetyMargin),
-      m_maxCpuTime(maxCpuTime)
+      m_numControls(m_model.getControls().size1())
 {
-    // Constructor implementation (if needed)
 }
 
 void Ocp::setupOcp(
