@@ -65,13 +65,13 @@ class DatasetVisualizer:
             print(f"Warning: Metadata file not found at {meta_path}")
             # Use defaults
             self.metadata = {
-                "n_intervals": 50,
+                "n_intervals": 100,
                 "sim_step": 0.2,
                 "obstacles": [],
                 "floor_bounds": {"x": [0, 20], "y": [0, 20]}
             }
         
-        self.n_intervals = self.metadata.get("n_intervals", 50)
+        self.n_intervals = self.metadata.get("n_intervals", 100)
         self.sim_step = self.metadata.get("sim_step", 0.2)
         self.obstacles = self.metadata.get("obstacles", [])
         self.floor_bounds = self.metadata.get("floor_bounds", {"x": [0, 20], "y": [0, 20]})
@@ -91,21 +91,31 @@ class DatasetVisualizer:
         input_vec = self.inputs[idx]
         output_vec = self.outputs[idx]
         
-        # Parse input (first 22 values; indices 22+ are robot params appended at the end)
+        # Parse input: [x0,y0,θ0, xT,yT,θT, obs0..obsK (×3 each), safety_margin, robot_params...]
         x0, y0, theta0 = input_vec[0:3]
         xT, yT, thetaT = input_vec[3:6]
-        
-        # Parse obstacles (15 values: 5 obstacles × 3 values each)
+
+        # Derive obstacle count from metadata (populated by generator); fall back to
+        # scanning input_columns if available, otherwise infer from input vector length.
+        if self.metadata.get("obstacles"):
+            n_obs = len(self.metadata["obstacles"])
+        elif "input_columns" in self.metadata:
+            n_obs = sum(1 for c in self.metadata["input_columns"] if c.endswith("_r") and c.startswith("obs"))
+        else:
+            # input layout: 6 (states) + 3*n_obs + 1 (safety) + n_robot_params
+            # minimum robot_params = 0, so n_obs <= (len - 7) / 3
+            n_obs = (self.inputs.shape[1] - 7) // 3
+
         obstacles_parsed = []
-        for k in range(5):
+        for k in range(n_obs):
             base = 6 + k * 3
             obstacles_parsed.append({
                 "x": float(input_vec[base]),
                 "y": float(input_vec[base + 1]),
                 "r": float(input_vec[base + 2])
             })
-        
-        safety_margin = float(input_vec[21])
+
+        safety_margin = float(input_vec[6 + n_obs * 3])
         
         # Parse output - dynamically sized based on n_intervals
         # For n_intervals = N:
